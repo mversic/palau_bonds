@@ -1,0 +1,17 @@
+[package]
+name = "interest_payments"
+
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+
+license.workspace = true
+
+[lib]
+crate-type = ['cdylib']
+
+[dependencies]
+iroha_trigger.workspace = true
+
+panic-halt.workspace = true
+dlmalloc.workspace = true

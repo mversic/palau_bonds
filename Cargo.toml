@@ -1,0 +1,11 @@
+[package]
+name = "iroha_stable"
+
+edition = "2021"
+version = "0.1.0"
+
+license = "Apache-2.0"
+
+[dependencies]
+iroha_client = { git = "https://github.com/hyperledger/iroha/", branch = "stable"}
+iroha_config = { git = "https://github.com/hyperledger/iroha/", branch = "stable" }

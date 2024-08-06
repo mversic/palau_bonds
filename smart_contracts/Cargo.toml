@@ -1,0 +1,30 @@
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+
+license = "Apache-2.0"
+
+[workspace]
+resolver = "2"
+members = [
+    "register_bond",
+    "bond_maturation",
+    "interest_payments",
+    "buy_bonds",
+]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+strip = "debuginfo" # Remove debugging info from the binary
+panic = "abort"     # Panics are transcribed to Traps when compiling for wasm anyways
+lto = true          # Link-time-optimization produces notable decrease in binary size
+opt-level = "z"     # Optimize for size vs speed with "s"/"z"(removes vectorization)
+codegen-units = 1   # Further reduces binary size but increases compilation time
+
+[workspace.dependencies]
+iroha_trigger = { git = "https://github.com/hyperledger/iroha", branch = "stable", features = ["debug"] }
+
+dlmalloc = { version = "0.2.6", features = ["global"] }
+panic-halt = "0.2.0"
