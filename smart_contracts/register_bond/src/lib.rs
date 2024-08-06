@@ -12,7 +12,7 @@ use dlmalloc::GlobalDlmalloc;
 use iroha_trigger::{
     data_model::prelude::*,
     debug::{dbg_panic, DebugExpectExt as _},
-    log::info,
+    log::{info, trace},
     prelude::*,
 };
 
@@ -20,22 +20,24 @@ use iroha_trigger::{
 static ALLOC: GlobalDlmalloc = GlobalDlmalloc;
 
 struct RegisterBond {
+    /// Authority issuing the bond
+    issuer: AccountId,
     /// Who's buying the bond
     new_bond: NewAssetDefinition,
 }
 
 impl RegisterBond {
-    fn from_metadata(metadata: &Value) -> Self {
+    fn from_metadata(metadata: &Value, issuer: AccountId) -> Self {
         let new_bond: NewAssetDefinition = metadata
             .to_owned()
             .try_into()
             .dbg_expect("`bond` not of the `NewAssetDefinition` type");
 
-        Self { new_bond }
+        Self { issuer, new_bond }
     }
 
     // TODO:
-    fn register_interest_payments_trigger(&self, owner: AccountId) {
+    fn register_interest_payments_trigger(&self) {
         const WASM: &[u8] =
             core::include_bytes!(concat!(core::env!("OUT_DIR"), "/interest_payments.wasm"));
 
@@ -67,7 +69,7 @@ impl RegisterBond {
             Action::new(
                 WasmSmartContract::from_compiled(WASM.to_vec()),
                 Repeats::Indefinitely,
-                owner,
+                self.issuer.clone(),
                 // TODO: This is simplified in RC22
                 TriggeringFilterBox::from(TimeEventFilter::new(ExecutionTime::Schedule(
                     TimeSchedule::starting_at(registration_time).with_period(payment_period),
@@ -83,7 +85,7 @@ impl RegisterBond {
             .unwrap();
     }
 
-    fn register_bond_maturation_trigger(&self, owner: AccountId) {
+    fn register_bond_maturation_trigger(&self) {
         const WASM: &[u8] =
             core::include_bytes!(concat!(core::env!("OUT_DIR"), "/bond_maturation.wasm"));
 
@@ -110,7 +112,7 @@ impl RegisterBond {
             Action::new(
                 WasmSmartContract::from_compiled(WASM.to_vec()),
                 Repeats::Exactly(1),
-                owner,
+                self.issuer.clone(),
                 // TODO: This is simplified in RC22
                 TriggeringFilterBox::from(TimeEventFilter::new(ExecutionTime::Schedule(
                     TimeSchedule::starting_at(maturation_date),
@@ -119,22 +121,22 @@ impl RegisterBond {
         );
 
         info!(&format!(
-            "{maturation_trigger_id}: Registering interest payments trigger"
+            "{maturation_trigger_id}: Registering maturation trigger"
         ));
         RegisterExpr::new(maturation_trigger).execute().unwrap();
     }
 
-    fn execute(self, owner: AccountId) {
-        self.register_interest_payments_trigger(owner.clone());
-        self.register_bond_maturation_trigger(owner);
+    fn execute(self) {
+        self.register_interest_payments_trigger();
+        self.register_bond_maturation_trigger();
 
         RegisterExpr::new(self.new_bond).execute().unwrap();
     }
 }
 
 #[iroha_trigger::main]
-fn main(id: TriggerId, owner: AccountId, event: Event) {
-    let register_bond = "bond".parse().unwrap();
+fn main(id: TriggerId, issuer: AccountId, event: Event) {
+    let register_bond_key = "bond".parse().unwrap();
 
     // FIXME: Replace with by call trigger with args after migrating to RC22
     let Event::Data(DataEvent::Trigger(TriggerEvent::MetadataInserted(event))) = event else {
@@ -149,12 +151,13 @@ fn main(id: TriggerId, owner: AccountId, event: Event) {
             To avoid this error, register the trigger using a more strict filter",
         );
     }
-    if *event.key() != register_bond {
-        dbg_panic(
-            "INTERNAL BUG: Triggered by metadata insert event with wrong key.
-            To avoid this error, register the trigger using a more strict filter",
-        );
+    if *event.key() != register_bond_key {
+        // TODO: Can we filter more precisely to avoid invoking trigger?
+        trace!("Triggered by account metadata insert event with another key");
     }
 
-    RegisterBond::from_metadata(event.value()).execute(owner);
+    RegisterBond::from_metadata(event.value(), issuer).execute();
+    RemoveKeyValueExpr::new(id, register_bond_key)
+        .execute()
+        .unwrap();
 }

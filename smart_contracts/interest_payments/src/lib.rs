@@ -14,7 +14,7 @@ use iroha_trigger::{data_model::prelude::*, debug::dbg_panic};
 static ALLOC: GlobalDlmalloc = GlobalDlmalloc;
 
 #[iroha_trigger::main]
-fn main(id: TriggerId, _owner: AccountId, event: Event) {
+fn main(id: TriggerId, issuer: AccountId, event: Event) {
     let bond_id: AssetDefinitionId = id
         .name()
         .as_ref()
@@ -40,8 +40,9 @@ fn main(id: TriggerId, _owner: AccountId, event: Event) {
         .execute()
         .dbg_expect(&format!("{bond_id}: Bond not found"));
 
-    // FIXME: This is yearly coupon rate, needs to be calculated from payment frequency
-    let coupon_rate: Fixed = bond
+    // WARN: Coupon rate can be changed by the issuer after the bond is issued
+    // FIXME: This is yearly coupon rate, needs to be combined with payment frequency
+    let yearly_coupon_rate: Fixed = bond
         .metadata()
         .get(&"coupon_rate".parse::<Name>().unwrap())
         .dbg_expect("INTERNAL BUG: bond missing `coupon_rate`")
@@ -57,18 +58,27 @@ fn main(id: TriggerId, _owner: AccountId, event: Event) {
         .try_into()
         .dbg_expect("`nominal_value` not of the `NumericValue::Fixed` type");
 
+    let currency: AssetDefinitionId = bond
+        .metadata()
+        .get("currency")
+        .dbg_expect("Currency not found")
+        .to_owned()
+        .try_into()
+        .dbg_expect("`currency` not of the `AssetDefinitionId` type");
+
     for issued_bond in issued_bonds {
+        let issuer_money = AssetId::new(currency.clone(), issuer.clone());
+
         let quantity: u64 = NumericValue::try_from(issued_bond.value().to_owned())
             .dbg_expect("INTERNAL BUG: bond quantity is not of the `NumericValue::u64` type")
             .try_into()
             .dbg_expect("INTERNAL BUG: bond quantity is not of the `u64` type");
         let amount = Fixed::try_from(quantity as f64)
             .and_then(|qty| qty.checked_mul(nominal_value))
-            .and_then(|qty| qty.checked_mul(coupon_rate))
+            .and_then(|qty| qty.checked_mul(yearly_coupon_rate))
             .dbg_expect("Bond total price overflow");
 
-        // WARN: Should interest be minted or transferred from the bond issuer to the buyer?
-        MintExpr::new(amount, issued_bond.id().clone())
+        TransferExpr::new(issuer_money, amount, issued_bond.id().account_id().clone())
             .execute()
             .dbg_expect("Failed to pay bond interest");
     }

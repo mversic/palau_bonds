@@ -46,12 +46,10 @@ fn register_triggers(iroha: &Client) -> Result<()> {
             Repeats::Indefinitely,
             account_id.clone(),
             // TODO: Can be simplified in RC22
-            TriggeringFilterBox::from(BySome(DataEntityFilter::ByTrigger(BySome(
-                TriggerFilter::new(
-                    BySome(OriginFilter::new(register_bond_trigger_id)),
-                    BySome(TriggerEventFilter::ByMetadataInserted),
-                ),
-            )))),
+            TriggeringFilterBox::from(BySome(DataEntityFilter::from(BySome(TriggerFilter::new(
+                BySome(OriginFilter::new(register_bond_trigger_id)),
+                BySome(TriggerEventFilter::ByMetadataInserted),
+            ))))),
         ),
     );
 
@@ -63,12 +61,10 @@ fn register_triggers(iroha: &Client) -> Result<()> {
             Repeats::Indefinitely,
             account_id.clone(),
             // TODO: Can be simplified in RC22
-            TriggeringFilterBox::from(BySome(DataEntityFilter::ByTrigger(BySome(
-                TriggerFilter::new(
-                    BySome(OriginFilter::new(buy_bonds_trigger_id)),
-                    BySome(TriggerEventFilter::ByMetadataInserted),
-                ),
-            )))),
+            TriggeringFilterBox::from(BySome(DataEntityFilter::from(BySome(AccountFilter::new(
+                AcceptAll,
+                BySome(AccountEventFilter::ByMetadataInserted),
+            ))))),
         ),
     );
 
@@ -132,11 +128,8 @@ fn create_new_bond() -> <AssetDefinition as Registered>::With {
         )
         .unwrap();
 
-    AssetDefinition::new(
-        "t-bond#palau".parse().unwrap(),
-        AssetValueType::Quantity,
-    )
-    .with_metadata(bond_metadata)
+    AssetDefinition::new("t-bond#palau".parse().unwrap(), AssetValueType::Quantity)
+        .with_metadata(bond_metadata)
 }
 
 fn main() -> Result<()> {
@@ -144,8 +137,8 @@ fn main() -> Result<()> {
     let iroha = Client::new(&ConfigurationProxy::from_path("configs/client.json").build()?)?;
     register_triggers(&iroha)?;
 
-    //println!("Waiting for 5 seconds...");
-    //sleep(Duration::from_secs(5));
+    println!("Waiting for 5 seconds...");
+    sleep(Duration::from_secs(5));
 
     // Register new bond
     let new_bond = create_new_bond();
