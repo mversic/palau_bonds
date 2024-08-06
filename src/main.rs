@@ -1,36 +1,38 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use bonds_data_model::{BondDetails, RegisterBondArgs};
 use eyre::Result;
-use iroha_client::{
+use iroha::{
     client::Client,
-    crypto::{Algorithm, KeyPair, PrivateKey},
+    config::Config,
     data_model::{
-        asset::{AssetDefinition, AssetValueType},
-        metadata::{Limits, Metadata},
+        asset::AssetDefinition,
+        metadata::Metadata,
         prelude::{TransactionBuilder, *},
         Registered,
     },
 };
-use iroha_config::{base::proxy::LoadFromDisk, client::ConfigurationProxy};
 
 fn register_triggers(iroha: &Client) -> Result<()> {
     // TODO: Get from config in RC22
-    let account_id: AccountId = "government@palau".parse().unwrap();
+    let issuer: AccountId =
+        "ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0@palau"
+            .parse()
+            .unwrap();
 
     println!("Building register_bond trigger...");
     let register_bond_wasm = WasmSmartContract::from_compiled(
         iroha_wasm_builder::Builder::new("smart_contracts/register_bond")
-            // TODO: Available in RC22
-            //.show_output()
+            .show_output()
             .build()?
             .optimize()?
             .into_bytes()?,
     );
+
     println!("Building buy_bonds trigger...");
     let buy_bonds_wasm = WasmSmartContract::from_compiled(
         iroha_wasm_builder::Builder::new("smart_contracts/buy_bonds")
-            // TODO: Available in RC22
-            //.show_output()
+            .show_output()
             .build()?
             .optimize()?
             .into_bytes()?,
@@ -42,12 +44,10 @@ fn register_triggers(iroha: &Client) -> Result<()> {
         Action::new(
             register_bond_wasm,
             Repeats::Indefinitely,
-            account_id.clone(),
-            // TODO: Can be simplified in RC22
-            TriggeringFilterBox::from(BySome(DataEntityFilter::from(BySome(TriggerFilter::new(
-                BySome(OriginFilter::new(register_bond_trigger_id)),
-                BySome(TriggerEventFilter::ByMetadataInserted),
-            ))))),
+            issuer.clone(),
+            ExecuteTriggerEventFilter::new()
+                .for_trigger(register_bond_trigger_id)
+                .under_authority(issuer.clone()),
         ),
     );
 
@@ -57,19 +57,15 @@ fn register_triggers(iroha: &Client) -> Result<()> {
         Action::new(
             buy_bonds_wasm,
             Repeats::Indefinitely,
-            account_id.clone(),
-            // TODO: Can be simplified in RC22
-            TriggeringFilterBox::from(BySome(DataEntityFilter::from(BySome(AccountFilter::new(
-                AcceptAll,
-                BySome(AccountEventFilter::ByMetadataInserted),
-            ))))),
+            issuer.clone(),
+            AccountEventFilter::new().for_events(AccountEventSet::MetadataInserted),
         ),
     );
 
-    println!("Registering register_bond trigger...");
-    iroha.submit_blocking(RegisterExpr::new(register_bond_trigger))?;
+    println!("Registering register_bond trigger... {}", iroha.account == issuer);
+    iroha.submit_blocking(Register::trigger(register_bond_trigger))?;
     println!("Registering buy_bonds trigger...");
-    iroha.submit_blocking(RegisterExpr::new(buy_bonds_trigger))?;
+    iroha.submit_blocking(Register::trigger(buy_bonds_trigger))?;
 
     Ok(())
 }
@@ -77,11 +73,8 @@ fn register_triggers(iroha: &Client) -> Result<()> {
 fn register_bond(iroha: &Client, new_bond: <AssetDefinition as Registered>::With) -> Result<()> {
     let register_bond_trigger_id: TriggerId = "register_bond".parse()?;
 
-    let set_key = SetKeyValueExpr::new(
-        register_bond_trigger_id,
-        "bond".parse::<Name>()?,
-        new_bond.clone(),
-    );
+    let args = RegisterBondArgs { bond: new_bond };
+    let set_key = ExecuteTrigger::new(register_bond_trigger_id).with_args(&args);
 
     println!("Registering new bond...");
     iroha.submit_blocking(set_key)?;
@@ -91,106 +84,55 @@ fn register_bond(iroha: &Client, new_bond: <AssetDefinition as Registered>::With
 
 fn create_new_bond() -> <AssetDefinition as Registered>::With {
     let curr_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let currency_id: AssetDefinitionId = "USD#palau".parse().unwrap();
-    let limits = Limits::new(1024, 1024);
-    let fee_recipient_account_id: AccountId = "government@palau".parse().unwrap();
 
-    let mut bond_metadata = Metadata::new();
-    bond_metadata
-        .insert_with_limits("currency".parse().unwrap(), currency_id.into(), limits)
-        .unwrap();
-    bond_metadata
-        .insert_with_limits(
-            "quantity".parse().unwrap(),
-            100_u32.into(),
-            limits,
-        )
-        .unwrap();
-    bond_metadata
-        .insert_with_limits(
-            "nominal_value".parse().unwrap(),
-            100_000_f64.try_into().unwrap(), // 100_000$ to make the final value 0.19$
-            limits,
-        )
-        .unwrap();
-    bond_metadata
-        .insert_with_limits(
-            "coupon_rate".parse().unwrap(),
-            0.1.try_into().unwrap(), //10%
-            limits,
-        )
-        .unwrap();
-    bond_metadata
-        .insert_with_limits(
-            "fixed_fee".parse().unwrap(),
-            0.1_f64.try_into().unwrap(),
-            limits,
-        )
-        .unwrap();
-    bond_metadata
-        .insert_with_limits(
-            "fee_recipient_account_id".parse().unwrap(),
-            fee_recipient_account_id.into(),
-            limits,
-        )
-        .unwrap();
+    let bond_details = BondDetails {
+        currency: "USD#palau".parse().unwrap(),
+        nominal_value: numeric!(100_000), // 100_000$ to make the final value 0.19$
+        quantity: numeric!(100),
+        coupon_rate: numeric!(0.1), //10%
+        registration_time: curr_time,
+        maturation_date: curr_time + Duration::from_secs(120),
+        payment_frequency: Duration::from_secs(60),
+        fee: numeric!(0.1),
+        fee_beneficiary:
+            "ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0@palau"
+                .parse()
+                .unwrap(),
+    };
 
-    bond_metadata
-        .insert_with_limits(
-            "maturation_date_ms".parse().unwrap(),
-            ((curr_time + Duration::from_secs(120)).as_millis() as u64).into(),
-            limits,
-        )
-        .unwrap();
-    bond_metadata
-        .insert_with_limits(
-            "registration_time_ms".parse().unwrap(),
-            (curr_time.as_millis() as u64).into(),
-            limits,
-        )
-        .unwrap();
-
-    let payment_frequency_seconds = 60_u64;
-    bond_metadata
-        .insert_with_limits(
-            "payment_frequency_seconds".parse().unwrap(),
-            payment_frequency_seconds.try_into().unwrap(),
-            limits,
-        )
-        .unwrap();
-
-    AssetDefinition::new("t-bond#palau".parse().unwrap(), AssetValueType::Quantity)
-        .with_metadata(bond_metadata)
+    let mut bond_metadata = Metadata::default();
+    bond_metadata.insert("details".parse().unwrap(), bond_details);
+    AssetDefinition::numeric("t-bond#palau".parse().unwrap()).with_metadata(bond_metadata)
 }
 
 fn buy_bonds(iroha: &Client) -> Result<()> {
-    let buyer: AccountId = "citizen@palau".parse().unwrap();
+    let buyer: AccountId =
+        "ed012004FF5B81046DDCCF19E2E451C45DFB6F53759D4EB30FA2EFA807284D1CC33016@palau"
+            .parse()
+            .unwrap();
     let bond_id: AssetDefinitionId = "t-bond#palau".parse()?;
 
-    let limits = Limits::new(1024, 1024);
-    let mut buy_order = Metadata::new();
+    let mut buy_order = Metadata::default();
 
     buy_order
-        .insert_with_limits("bond".parse().unwrap(), bond_id.into(), limits)
+        .insert("bond".parse().unwrap(), JsonString::new(bond_id))
         .unwrap();
 
     buy_order
-        .insert_with_limits("quantity".parse().unwrap(), 1_u32.into(), limits)
+        .insert("quantity".parse().unwrap(), 1_u32)
         .unwrap();
 
     println!("Buying bond...");
-    let keypair = KeyPair::new(
-        "ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0".parse()?,
-        PrivateKey::from_hex(Algorithm::Ed25519, "9AC47ABF59B356E0BD7DCBBBB4DEC080E302156A48CA907E47CB6AEA1D32719E7233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0".as_ref())?,
-    )?;
+    let private_key =
+        "8026209AC47ABF59B356E0BD7DCBBBB4DEC080E302156A48CA907E47CB6AEA1D32719E".parse()?;
 
-    let tx = TransactionBuilder::new(buyer.clone())
-        .with_instructions([SetKeyValueExpr::new(
+    let tx = TransactionBuilder::new(iroha.chain.clone(), buyer.clone())
+        .with_instructions([SetKeyValue::account(
             buyer,
             "buy_bonds".parse::<Name>()?,
-            buy_order,
+            JsonString::new(buy_order),
         )])
-        .sign(keypair)?;
+        .sign(&private_key);
 
     iroha.submit_transaction_blocking(&tx)?;
 
@@ -199,7 +141,7 @@ fn buy_bonds(iroha: &Client) -> Result<()> {
 
 fn main() -> Result<()> {
     // Prepare blockchain
-    let iroha = Client::new(&ConfigurationProxy::from_path("configs/client.json").build()?)?;
+    let iroha = Client::new(Config::load("configs/client.toml").unwrap());
     register_triggers(&iroha)?;
 
     // Register new bond

@@ -7,6 +7,7 @@ license = "Apache-2.0"
 [workspace]
 resolver = "2"
 members = [
+    "data_model",
     "register_bond",
     "bond_maturation",
     "interest_payments",
@@ -24,7 +25,12 @@ opt-level = "z"     # Optimize for size vs speed with "s"/"z"(removes vectorizat
 codegen-units = 1   # Further reduces binary size but increases compilation time
 
 [workspace.dependencies]
-iroha_trigger = { git = "https://github.com/hyperledger/iroha", branch = "stable", features = ["debug"] }
+iroha_trigger = { git = "https://github.com/hyperledger/iroha", tag = "v2.0.0-pre-rc.22.0", features = ["debug"] }
 
+bonds_data_model = { path = "data_model" }
+
+serde_json = { version = "1.0.91", default-features = false }
+serde = { version = "1.0.151", default-features = false }
 dlmalloc = { version = "0.2.6", features = ["global"] }
+getrandom = { version = "0.2", features = ["custom"] }
 panic-halt = "0.2.0"

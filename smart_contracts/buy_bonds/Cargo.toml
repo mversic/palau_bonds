@@ -10,7 +10,9 @@ license.workspace = true
 crate-type = ['cdylib']
 
 [dependencies]
+bonds_data_model.workspace = true
 iroha_trigger.workspace = true
 
 panic-halt.workspace = true
+getrandom.workspace = true
 dlmalloc.workspace = true

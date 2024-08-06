@@ -9,10 +9,8 @@ version = "0.1.0"
 license = "Apache-2.0"
 
 [dependencies]
-iroha_client = { git = "https://github.com/hyperledger/iroha/", branch = "stable"}
-iroha_config = { git = "https://github.com/hyperledger/iroha/", branch = "stable" }
-
-iroha_wasm_builder = { git = "https://github.com/hyperledger/iroha", branch = "stable" }
+iroha_wasm_builder = { git = "https://github.com/hyperledger/iroha", tag = "v2.0.0-pre-rc.22.0" }
+iroha = { git = "https://github.com/hyperledger/iroha/", tag = "v2.0.0-pre-rc.22.0" }
+bonds_data_model = { path = "smart_contracts/data_model" }
 
 eyre = "0.6.12"
-

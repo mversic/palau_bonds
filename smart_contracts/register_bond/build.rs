@@ -15,8 +15,7 @@ fn build_trigger(trigger: &str) -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = std::env::var("OUT_DIR").unwrap();
     eprintln!("{out_dir}");
     let wasm = iroha_wasm_builder::Builder::new(&trigger_dir)
-        // TODO: Available in RC22
-        //.show_output()
+        .show_output()
         .build()?
         .optimize()?
         .into_bytes()?;
