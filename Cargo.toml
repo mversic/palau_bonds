@@ -3,9 +3,16 @@ name = "iroha_stable"
 
 edition = "2021"
 version = "0.1.0"
+# TODO: Add authors, then reference from all workspace crates
+# authors = []
 
 license = "Apache-2.0"
 
 [dependencies]
 iroha_client = { git = "https://github.com/hyperledger/iroha/", branch = "stable"}
 iroha_config = { git = "https://github.com/hyperledger/iroha/", branch = "stable" }
+
+iroha_wasm_builder = { git = "https://github.com/hyperledger/iroha", branch = "stable" }
+
+eyre = "0.6.12"
+

@@ -12,6 +12,7 @@ use dlmalloc::GlobalDlmalloc;
 use iroha_trigger::{
     data_model::prelude::*,
     debug::{dbg_panic, DebugExpectExt as _},
+    log::info,
     prelude::*,
 };
 
@@ -24,10 +25,8 @@ struct RegisterBond {
 }
 
 impl RegisterBond {
-    fn from_metadata(metadata: &Metadata) -> Self {
+    fn from_metadata(metadata: &Value) -> Self {
         let new_bond: NewAssetDefinition = metadata
-            .get("bond")
-            .dbg_expect("`bond` not found")
             .to_owned()
             .try_into()
             .dbg_expect("`bond` not of the `NewAssetDefinition` type");
@@ -56,8 +55,15 @@ impl RegisterBond {
         let payment_period = Duration::from_millis(4000);
 
         let bond_id = self.new_bond.id();
+        let interest_payments_trigger_id: TriggerId = format!(
+            "{}_{}_interest_payments",
+            bond_id.name(),
+            bond_id.domain_id()
+        )
+        .parse()
+        .unwrap();
         let interest_payments_trigger = Trigger::new(
-            format!("{bond_id}_interest_payments").parse().unwrap(),
+            interest_payments_trigger_id.clone(),
             Action::new(
                 WasmSmartContract::from_compiled(WASM.to_vec()),
                 Repeats::Indefinitely,
@@ -69,7 +75,12 @@ impl RegisterBond {
             ),
         );
 
-        RegisterExpr::new(interest_payments_trigger);
+        info!(&format!(
+            "{interest_payments_trigger_id}: Registering interest payments trigger"
+        ));
+        RegisterExpr::new(interest_payments_trigger)
+            .execute()
+            .unwrap();
     }
 
     fn register_bond_maturation_trigger(&self, owner: AccountId) {
@@ -90,8 +101,12 @@ impl RegisterBond {
         );
 
         let bond_id = self.new_bond.id();
+        let maturation_trigger_id: TriggerId =
+            format!("{}_{}_bond_maturation", bond_id.name(), bond_id.domain_id())
+                .parse()
+                .unwrap();
         let maturation_trigger = Trigger::new(
-            format!("{bond_id}_bond_maturation").parse().unwrap(),
+            maturation_trigger_id.clone(),
             Action::new(
                 WasmSmartContract::from_compiled(WASM.to_vec()),
                 Repeats::Exactly(1),
@@ -103,7 +118,10 @@ impl RegisterBond {
             ),
         );
 
-        RegisterExpr::new(maturation_trigger);
+        info!(&format!(
+            "{maturation_trigger_id}: Registering interest payments trigger"
+        ));
+        RegisterExpr::new(maturation_trigger).execute().unwrap();
     }
 
     fn execute(self, owner: AccountId) {
@@ -116,7 +134,7 @@ impl RegisterBond {
 
 #[iroha_trigger::main]
 fn main(id: TriggerId, owner: AccountId, event: Event) {
-    let register_bond = "register_bond".parse().unwrap();
+    let register_bond = "bond".parse().unwrap();
 
     // FIXME: Replace with by call trigger with args after migrating to RC22
     let Event::Data(DataEvent::Trigger(TriggerEvent::MetadataInserted(event))) = event else {
@@ -138,9 +156,5 @@ fn main(id: TriggerId, owner: AccountId, event: Event) {
         );
     }
 
-    let Value::LimitedMetadata(metadata) = event.value() else {
-        dbg_panic("Metadata value not of the correct type, expected: LimitedMetadata");
-    };
-
-    RegisterBond::from_metadata(metadata).execute(owner);
+    RegisterBond::from_metadata(event.value()).execute(owner);
 }

@@ -1,0 +1,94 @@
+{
+  "executor": "./executor.wasm",
+  "transactions": [
+    [
+      {
+        "Register": {
+          "NewDomain": {
+            "id": "palau",
+            "metadata": {}
+          }
+        }
+      },
+      {
+        "Register": {
+          "NewAccount": {
+            "id": "government@palau",
+            "signatories": [
+              "ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0"
+            ],
+            "metadata": {
+              "key": {
+                "String": "value"
+              }
+            }
+          }
+        }
+      },
+      {
+        "Sequence": [
+          {
+            "NewParameter": {
+              "Parameter": "?MaxTransactionsInBlock=512"
+            }
+          },
+          {
+            "NewParameter": {
+              "Parameter": "?BlockTime=2000"
+            }
+          },
+          {
+            "NewParameter": {
+              "Parameter": "?CommitTimeLimit=4000"
+            }
+          },
+          {
+            "NewParameter": {
+              "Parameter": "?TransactionLimits=4096,4194304_TL"
+            }
+          },
+          {
+            "NewParameter": {
+              "Parameter": "?WSVAssetMetadataLimits=1048576,4096_ML"
+            }
+          },
+          {
+            "NewParameter": {
+              "Parameter": "?WSVAssetDefinitionMetadataLimits=1048576,4096_ML"
+            }
+          },
+          {
+            "NewParameter": {
+              "Parameter": "?WSVAccountMetadataLimits=1048576,4096_ML"
+            }
+          },
+          {
+            "NewParameter": {
+              "Parameter": "?WSVDomainMetadataLimits=1048576,4096_ML"
+            }
+          },
+          {
+            "NewParameter": {
+              "Parameter": "?WSVTriggerMetadataLimits=1048576,4096_ML"
+            }
+          },
+          {
+            "NewParameter": {
+              "Parameter": "?WSVIdentLengthLimits=1,128_LL"
+            }
+          },
+          {
+            "NewParameter": {
+              "Parameter": "?WASMFuelLimit=23000000"
+            }
+          },
+          {
+            "NewParameter": {
+              "Parameter": "?WASMMaxMemory=524288000"
+            }
+          }
+        ]
+      }
+    ]
+  ]
+}
