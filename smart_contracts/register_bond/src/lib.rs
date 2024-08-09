@@ -58,7 +58,7 @@ impl RegisterBond {
 
         let bond_id = self.new_bond.id();
         let interest_payments_trigger_id: TriggerId = format!(
-            "{}_{}_interest_payments",
+            "{}%%{}%%interest_payments",
             bond_id.name(),
             bond_id.domain_id()
         )
@@ -89,24 +89,27 @@ impl RegisterBond {
         const WASM: &[u8] =
             core::include_bytes!(concat!(core::env!("OUT_DIR"), "/bond_maturation.wasm"));
 
-        let maturation_date = Duration::from_millis(
-            NumericValue::try_from(
-                self.new_bond
-                    .metadata()
-                    .get(&"maturation_date_ms".parse::<Name>().unwrap())
-                    .dbg_expect("INTERNAL BUG: bond missing `maturation_date_ms`")
-                    .to_owned(),
-            )
-            .dbg_expect("`maturation_date_ms` not of the `NumericValue` type")
+        let maturation_date_ms: NumericValue = self
+            .new_bond
+            .metadata()
+            .get(&"maturation_date_ms".parse::<Name>().unwrap())
+            .dbg_expect("INTERNAL BUG: bond missing `maturation_date_ms`")
+            .to_owned()
             .try_into()
-            .dbg_expect("INTERNAL BUG: `maturation_date_ms` not of the `NumericValue::U64` type"),
-        );
+            .dbg_expect("`maturation_date_ms` not of the `NumericValue` type");
+        let maturation_date =
+            Duration::from_millis(maturation_date_ms.try_into().dbg_expect(
+                "INTERNAL BUG: `maturation_date_ms` not of the `NumericValue::U64` type",
+            ));
 
         let bond_id = self.new_bond.id();
-        let maturation_trigger_id: TriggerId =
-            format!("{}_{}_bond_maturation", bond_id.name(), bond_id.domain_id())
-                .parse()
-                .unwrap();
+        let maturation_trigger_id: TriggerId = format!(
+            "{}%%{}%%bond_maturation",
+            bond_id.name(),
+            bond_id.domain_id()
+        )
+        .parse()
+        .unwrap();
         let maturation_trigger = Trigger::new(
             maturation_trigger_id.clone(),
             Action::new(

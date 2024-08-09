@@ -1,15 +1,13 @@
-use std::{
-    thread::sleep,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use eyre::Result;
 use iroha_client::{
     client::Client,
+    crypto::{Algorithm, KeyPair, PrivateKey},
     data_model::{
         asset::{AssetDefinition, AssetValueType},
         metadata::{Limits, Metadata},
-        prelude::*,
+        prelude::{TransactionBuilder, *},
         Registered,
     },
 };
@@ -77,7 +75,7 @@ fn register_triggers(iroha: &Client) -> Result<()> {
 }
 
 fn register_bond(iroha: &Client, new_bond: <AssetDefinition as Registered>::With) -> Result<()> {
-    let register_bond_trigger_id: TriggerId = "register_bond".parse().unwrap();
+    let register_bond_trigger_id: TriggerId = "register_bond".parse()?;
 
     let set_key = SetKeyValueExpr::new(
         register_bond_trigger_id,
@@ -85,18 +83,25 @@ fn register_bond(iroha: &Client, new_bond: <AssetDefinition as Registered>::With
         new_bond.clone(),
     );
 
+    let issuer = "government@palau".parse()?;
+    let gov_bond = AssetId::new(new_bond.id().clone(), issuer);
+    let initial_amount = MintExpr::new(13_u32, gov_bond);
+
+    println!("Registering new bond...");
     iroha.submit_blocking(set_key)?;
+    iroha.submit_blocking(initial_amount)?;
 
     Ok(())
 }
 
 fn create_new_bond() -> <AssetDefinition as Registered>::With {
     let curr_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let currency_id: AssetDefinitionId = "USD#palau".parse().unwrap();
     let limits = Limits::new(1024, 1024);
 
     let mut bond_metadata = Metadata::new();
     bond_metadata
-        .insert_with_limits("currency".parse().unwrap(), "USD".to_owned().into(), limits)
+        .insert_with_limits("currency".parse().unwrap(), currency_id.into(), limits)
         .unwrap();
     bond_metadata
         .insert_with_limits(
@@ -132,17 +137,50 @@ fn create_new_bond() -> <AssetDefinition as Registered>::With {
         .with_metadata(bond_metadata)
 }
 
+fn buy_bonds(iroha: &Client) -> Result<()> {
+    let buyer: AccountId = "citizen@palau".parse().unwrap();
+    let bond_id: AssetDefinitionId = "t-bond#palau".parse()?;
+
+    let limits = Limits::new(1024, 1024);
+    let mut buy_order = Metadata::new();
+
+    buy_order
+        .insert_with_limits("bond".parse().unwrap(), bond_id.into(), limits)
+        .unwrap();
+
+    buy_order
+        .insert_with_limits("quantity".parse().unwrap(), 13_u32.into(), limits)
+        .unwrap();
+
+    println!("Buying bond...");
+    let keypair = KeyPair::new("ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0".parse()?,
+        PrivateKey::from_hex(Algorithm::Ed25519, "9AC47ABF59B356E0BD7DCBBBB4DEC080E302156A48CA907E47CB6AEA1D32719E7233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0".as_ref())?
+    )?;
+
+    let tx = TransactionBuilder::new(buyer.clone())
+        .with_instructions([SetKeyValueExpr::new(
+            buyer,
+            "buy_bonds".parse::<Name>()?,
+            buy_order,
+        )])
+        .sign(keypair)?;
+
+    iroha.submit_transaction_blocking(&tx)?;
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     // Prepare blockchain
     let iroha = Client::new(&ConfigurationProxy::from_path("configs/client.json").build()?)?;
     register_triggers(&iroha)?;
 
-    println!("Waiting for 5 seconds...");
-    sleep(Duration::from_secs(5));
-
     // Register new bond
     let new_bond = create_new_bond();
     register_bond(&iroha, new_bond)?;
+
+    // Buy some bonds
+    buy_bonds(&iroha)?;
 
     Ok(())
 }

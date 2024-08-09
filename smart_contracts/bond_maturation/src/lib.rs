@@ -8,7 +8,7 @@ extern crate panic_halt;
 use alloc::{borrow::ToOwned as _, format};
 
 use dlmalloc::GlobalDlmalloc;
-use iroha_trigger::{data_model::prelude::*, debug::dbg_panic, log::error};
+use iroha_trigger::{data_model::prelude::*, debug::dbg_panic, log::{error, info}};
 
 #[global_allocator]
 static ALLOC: GlobalDlmalloc = GlobalDlmalloc;
@@ -18,12 +18,13 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
     let bond_id: AssetDefinitionId = id
         .name()
         .as_ref()
-        .strip_suffix("_bond_maturation")
-        .dbg_expect("INTERNAL BUG: Trigger name must end with `_bond_maturation`")
+        .strip_suffix("%%bond_maturation")
+        .dbg_expect("INTERNAL BUG: Trigger name must end with `%%bond_maturation`")
+        .replace("%%", "#")
         .parse()
         .dbg_expect(
             "INTERNAL BUG: Unable to parse bond id from trigger name prefix.
-            Prefix trigger name with the id of the bond it's registered for",
+                Prefix trigger name with the id of the bond it's registered for",
         );
 
     if !matches!(event, Event::Time(_)) {
@@ -59,10 +60,11 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
     for issued_bond in issued_bonds {
         let buyer = issued_bond.id().account_id().clone();
 
-        let quantity: u64 = NumericValue::try_from(issued_bond.value().to_owned())
-            .dbg_expect("INTERNAL BUG: bond quantity is not of the `NumericValue::u64` type")
+        let quantity: u32 = issued_bond
+            .value()
+            .to_owned()
             .try_into()
-            .dbg_expect("INTERNAL BUG: bond quantity is not of the `u64` type");
+            .dbg_expect("INTERNAL BUG: bond quantity is not of the `u32` type");
         let amount = Fixed::try_from(quantity as f64)
             .and_then(|qty| qty.checked_mul(nominal_value))
             .dbg_expect("Bond total price overflow");
@@ -80,6 +82,8 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
                 .execute()
                 .dbg_expect("Sending money failed. Country might have went bankrupt");
         }
+
+        info!(&format!("{bond_id}: Bond matured"));
     }
 
     // TODO: Should all related triggers be unregistered at bond maturation?

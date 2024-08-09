@@ -17,11 +17,75 @@
             "signatories": [
               "ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0"
             ],
-            "metadata": {
-              "key": {
-                "String": "value"
+            "metadata": {}
+          }
+        }
+      },
+      {
+        "Register": {
+          "NewAccount": {
+            "id": "citizen@palau",
+            "signatories": [
+              "ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0"
+            ],
+            "metadata": {}
+          }
+        }
+      },
+      {
+        "Register": {
+          "NewAssetDefinition": {
+            "id": "USD#palau",
+            "value_type": "Fixed",
+            "mintable": "Infinitely",
+            "logo": null,
+            "metadata": {}
+          }
+        }
+      },
+      {
+        "Mint": {
+          "object": "13000_fx",
+          "destination_id": {
+            "AssetId": "USD##government@palau"
+          }
+        }
+      },
+      {
+        "Mint": {
+          "object": "13000_fx",
+          "destination_id": {
+            "AssetId": "USD##citizen@palau"
+          }
+        }
+      },
+      {
+        "Grant": {
+          "object": {
+            "PermissionToken": {
+              "definition_id": "CanTransferUserAsset",
+              "payload": {
+                "asset_id": "USD##citizen@palau"
               }
             }
+          },
+          "destination_id": {
+            "AccountId": "government@palau"
+          }
+        }
+      },
+      {
+        "Grant": {
+          "object": {
+            "PermissionToken": {
+              "definition_id": "CanRemoveKeyValueInUserAccount",
+              "payload": {
+                "account_id": "citizen@palau"
+              }
+            }
+          },
+          "destination_id": {
+            "AccountId": "government@palau"
           }
         }
       },

@@ -18,8 +18,9 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
     let bond_id: AssetDefinitionId = id
         .name()
         .as_ref()
-        .strip_suffix("_bond_maturation")
-        .dbg_expect("INTERNAL BUG: Trigger name must end with `_bond_maturation`")
+        .strip_suffix("%%interest_payments")
+        .dbg_expect("INTERNAL BUG: Trigger name must end with `%%interest_payments`")
+        .replace("%%", "#")
         .parse()
         .dbg_expect(
             "INTERNAL BUG: Unable to parse bond id from trigger name prefix.
@@ -69,10 +70,11 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
     for issued_bond in issued_bonds {
         let issuer_money = AssetId::new(currency.clone(), issuer.clone());
 
-        let quantity: u64 = NumericValue::try_from(issued_bond.value().to_owned())
-            .dbg_expect("INTERNAL BUG: bond quantity is not of the `NumericValue::u64` type")
+        let quantity: u32 = issued_bond
+            .value()
+            .to_owned()
             .try_into()
-            .dbg_expect("INTERNAL BUG: bond quantity is not of the `u64` type");
+            .dbg_expect("INTERNAL BUG: bond quantity is not of the `u32` type");
         let amount = Fixed::try_from(quantity as f64)
             .and_then(|qty| qty.checked_mul(nominal_value))
             .and_then(|qty| qty.checked_mul(yearly_coupon_rate))

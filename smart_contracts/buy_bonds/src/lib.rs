@@ -5,7 +5,7 @@ extern crate alloc;
 #[cfg(not(test))]
 extern crate panic_halt;
 
-use core::num::NonZeroU64;
+use core::num::NonZeroU32;
 
 use alloc::{borrow::ToOwned as _, format};
 
@@ -28,7 +28,7 @@ struct BuyBondsOrder {
     /// Which bond to buy
     bond: AssetDefinition,
     /// How many bonds to buy
-    quantity: NonZeroU64,
+    quantity: NonZeroU32,
 }
 
 impl BuyBondsOrder {
@@ -39,12 +39,12 @@ impl BuyBondsOrder {
             .to_owned()
             .try_into()
             .dbg_expect("`bond` not of the `AssetDefinitionId` type");
-        let quantity: u64 = metadata
+        let quantity: u32 = metadata
             .get("quantity")
             .dbg_expect("Bond quantity not found")
             .to_owned()
             .try_into()
-            .dbg_expect("`bond_quantity` not of the `u64` type");
+            .dbg_expect("`bond_quantity` not of the `u32` type");
 
         let bond = FindAssetDefinitionById::new(bond_id.clone())
             .execute()
@@ -54,7 +54,7 @@ impl BuyBondsOrder {
             issuer,
             buyer,
             bond,
-            quantity: NonZeroU64::new(quantity).dbg_expect("Bond quantity is zero"),
+            quantity: NonZeroU32::new(quantity).dbg_expect("Bond quantity is zero"),
         }
     }
 
@@ -99,7 +99,7 @@ impl BuyBondsOrder {
             .dbg_expect("Nominal value not found")
             .to_owned()
             .try_into()
-            .dbg_expect("`nominal_value` not of the `NumericValue` type");
+            .dbg_expect("`nominal_value` not of the `NumericValue::Fixed` type");
 
         let bonds_total_price = Fixed::try_from(self.quantity.get() as f64)
             .and_then(|qty| qty.checked_mul(bond_nominal_value))
@@ -146,5 +146,5 @@ fn main(_id: TriggerId, issuer: AccountId, event: Event) {
     BuyBondsOrder::from_metadata(metadata, issuer, buyer.clone()).execute();
     RemoveKeyValueExpr::new(buyer, buy_bonds_key)
         .execute()
-        .unwrap();
+        .dbg_unwrap();
 }
