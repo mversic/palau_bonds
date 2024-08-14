@@ -127,7 +127,9 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
     }
 
     fn find_coupon_payment_idx(buyer: &AccountId) -> u32 {
-        let coupon_payment_idx_key: Name = "coupon_payment_idx".parse().unwrap();
+        let coupon_payment_idx_key: Name = "coupon_payment_idx"
+            .parse()
+            .dbg_expect("INTERNAL BUG: Unable to parse coupon payment index key");
         let find_account_query = FindAccountById::new(buyer.clone());
 
         let account = find_account_query

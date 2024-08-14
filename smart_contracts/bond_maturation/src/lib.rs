@@ -110,11 +110,9 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
                 .execute()
                 .dbg_expect("Failed to set transfer info to buyer's metadata");
 
-            info!(
-            &format!(
+            info!(&format!(
                 "{bond_id}: Successfully set maturity payment info to buyer's metadata"
-            )
-        );
+            ));
         }
     }
 

@@ -101,9 +101,29 @@ impl BuyBondsOrder {
             .try_into()
             .dbg_expect("`nominal_value` not of the `NumericValue::Fixed` type");
 
+        // note: fixed fee is an absolute value, i.e 0.1$. Clarify if it should be a percentage of the bond nominal value
+        let bond_fee: Fixed = self
+            .bond
+            .metadata()
+            .get("fixed_fee")
+            .dbg_expect("Fixed fee not found")
+            .to_owned()
+            .try_into()
+            .dbg_expect("`fixed_fee` not of the `NumericValue::Fixed` type");
+
+        let bond_fee_recipient: AccountId = self
+            .bond
+            .metadata()
+            .get("fee_recipient_account_id")
+            .dbg_expect("Fee recipient account id not found")
+            .to_owned()
+            .try_into()
+            .dbg_expect("`fee_recipient_account_id` not of the `AccountId` type");
+
         let bonds_total_price = Fixed::try_from(self.quantity.get() as f64)
             .and_then(|qty| qty.checked_mul(bond_nominal_value))
             .dbg_expect("Bond total price overflow");
+
         let bond_buyer_money = AssetId::new(bond_currency, self.buyer.clone());
         let bond_issuer_bonds = AssetId::new(self.bond.id().clone(), self.issuer.clone());
 
@@ -114,9 +134,12 @@ impl BuyBondsOrder {
             return;
         }
 
-        TransferExpr::new(bond_buyer_money, bonds_total_price, self.issuer)
+        TransferExpr::new(bond_buyer_money.clone(), bonds_total_price, self.issuer)
             .execute()
             .dbg_expect("Sending money failed");
+        TransferExpr::new(bond_buyer_money, bond_fee, bond_fee_recipient)
+            .execute()
+            .dbg_expect("Sending fee failed");
         TransferExpr::new(bond_issuer_bonds, self.quantity.get(), self.buyer)
             .execute()
             .dbg_expect("Sending bond failed");

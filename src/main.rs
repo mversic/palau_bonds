@@ -98,6 +98,7 @@ fn create_new_bond() -> <AssetDefinition as Registered>::With {
     let curr_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let currency_id: AssetDefinitionId = "USD#palau".parse().unwrap();
     let limits = Limits::new(1024, 1024);
+    let fee_recipient_account_id: AccountId = "government@palau".parse().unwrap();
 
     let mut bond_metadata = Metadata::new();
     bond_metadata
@@ -120,7 +121,14 @@ fn create_new_bond() -> <AssetDefinition as Registered>::With {
     bond_metadata
         .insert_with_limits(
             "fixed_fee".parse().unwrap(),
-            0.1.try_into().unwrap(),
+            0.1_f64.try_into().unwrap(),
+            limits,
+        )
+        .unwrap();
+    bond_metadata
+        .insert_with_limits(
+            "fee_recipient_account_id".parse().unwrap(),
+            fee_recipient_account_id.into(),
             limits,
         )
         .unwrap();
