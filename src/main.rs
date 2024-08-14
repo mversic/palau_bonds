@@ -117,11 +117,18 @@ fn create_new_bond() -> <AssetDefinition as Registered>::With {
             limits,
         )
         .unwrap();
+    bond_metadata
+        .insert_with_limits(
+            "fixed_fee".parse().unwrap(),
+            0.1.try_into().unwrap(),
+            limits,
+        )
+        .unwrap();
 
     bond_metadata
         .insert_with_limits(
             "maturation_date_ms".parse().unwrap(),
-            ((curr_time + Duration::from_secs(10)).as_millis() as u64).into(),
+            ((curr_time + Duration::from_secs(120)).as_millis() as u64).into(),
             limits,
         )
         .unwrap();
@@ -149,7 +156,7 @@ fn buy_bonds(iroha: &Client) -> Result<()> {
         .unwrap();
 
     buy_order
-        .insert_with_limits("quantity".parse().unwrap(), 13_u32.into(), limits)
+        .insert_with_limits("quantity".parse().unwrap(), 3_u32.into(), limits)
         .unwrap();
 
     println!("Buying bond...");
@@ -180,7 +187,11 @@ fn main() -> Result<()> {
     register_bond(&iroha, new_bond)?;
 
     // Buy some bonds
-    buy_bonds(&iroha)?;
+    // buy_bonds(&iroha)?;
+
+    // thread::sleep(Duration::from_secs(25));
+
+    // buy_bonds(&iroha)?;
 
     Ok(())
 }

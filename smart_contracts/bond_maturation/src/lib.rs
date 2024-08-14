@@ -6,12 +6,14 @@ extern crate alloc;
 extern crate panic_halt;
 
 use alloc::{borrow::ToOwned as _, format};
-
+use alloc::string::ToString;
 use dlmalloc::GlobalDlmalloc;
 use iroha_trigger::{data_model::prelude::*, debug::dbg_panic, log::{error, info}};
 
 #[global_allocator]
 static ALLOC: GlobalDlmalloc = GlobalDlmalloc;
+
+const LIMITS: MetadataLimits = MetadataLimits::new(256, 256);
 
 #[iroha_trigger::main]
 fn main(id: TriggerId, issuer: AccountId, event: Event) {
@@ -60,6 +62,12 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
     for issued_bond in issued_bonds {
         let buyer = issued_bond.id().account_id().clone();
 
+        if buyer == issuer {
+            info!(&format!("{bond_id}: Buyer is the issuer, skipping unregistering"));
+
+            continue;
+        }
+
         let quantity: u32 = issued_bond
             .value()
             .to_owned()
@@ -78,13 +86,39 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
         } else {
             let bond_issuer_money = AssetId::new(bond_currency.clone(), issuer.clone());
 
-            TransferExpr::new(bond_issuer_money, amount, buyer)
-                .execute()
-                .dbg_expect("Sending money failed. Country might have went bankrupt");
-        }
+            info!(&format!(
+                "{bond_id}: Transferring {amount} {bond_currency} from {issuer} to {buyer}"
+            ));
 
-        info!(&format!("{bond_id}: Bond matured"));
+            TransferExpr::new(bond_issuer_money.clone(), amount.clone(), buyer.clone())
+                .execute()
+                .dbg_expect("Sending money failed. Country might have gone bankrupt");
+
+            let transfer_metadata_id: Name = format!("maturity_payment_{}", bond_id.name().to_string())
+                .parse()
+                .dbg_expect("INTERNAL BUG: Unable to parse transfer metadata id");
+
+            let mut transfer_metadata = Metadata::new();
+            transfer_metadata
+                .insert_with_limits("amount".parse().unwrap(), amount.into(), LIMITS)
+                .unwrap();
+            transfer_metadata
+                .insert_with_limits("currency".parse().unwrap(), bond_issuer_money.into(), LIMITS)
+                .unwrap();
+
+            SetKeyValueExpr::new(buyer, transfer_metadata_id, transfer_metadata)
+                .execute()
+                .dbg_expect("Failed to set transfer info to buyer's metadata");
+
+            info!(
+            &format!(
+                "{bond_id}: Successfully set maturity payment info to buyer's metadata"
+            )
+        );
+        }
     }
+
+    info!(&format!("{bond_id}: Bond matured"));
 
     // TODO: Should all related triggers be unregistered at bond maturation?
     // Or should they be unregistered when asset definition is unregistered?
