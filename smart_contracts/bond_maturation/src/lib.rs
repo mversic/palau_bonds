@@ -62,12 +62,6 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
     for issued_bond in issued_bonds {
         let buyer = issued_bond.id().account_id().clone();
 
-        if buyer == issuer {
-            info!(&format!("{bond_id}: Buyer is the issuer, skipping unregistering"));
-
-            continue;
-        }
-
         let quantity: u32 = issued_bond
             .value()
             .to_owned()
@@ -84,6 +78,12 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
                 issued_bond.id().account_id()
             ));
         } else {
+            if buyer == issuer {
+                info!(&format!("{bond_id}: Buyer is the issuer, skipping maturity payment"));
+
+                continue;
+            }
+
             let bond_issuer_money = AssetId::new(bond_currency.clone(), issuer.clone());
 
             info!(&format!(
