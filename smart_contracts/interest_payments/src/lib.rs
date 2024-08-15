@@ -5,11 +5,10 @@ extern crate alloc;
 #[cfg(not(test))]
 extern crate panic_halt;
 
-use alloc::string::ToString;
 use alloc::{borrow::ToOwned as _, format};
 use dlmalloc::GlobalDlmalloc;
 use iroha_trigger::data_model::query::account::model::FindAccountById;
-use iroha_trigger::log::info;
+use iroha_trigger::log::{info, trace};
 use iroha_trigger::{data_model::prelude::*, debug::dbg_panic};
 
 #[global_allocator]
@@ -74,7 +73,7 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
     for issued_bond in issued_bonds {
         let buyer = issued_bond.id().account_id().clone();
         if buyer == issuer {
-            info!(&format!("{bond_id}: Buyer is the issuer, skipping coupon payment"));
+            trace!(&format!("{bond_id}: Buyer is the issuer, skipping coupon payment"));
 
             continue;
         }
@@ -91,7 +90,7 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
             .and_then(|qty| qty.checked_mul(yearly_coupon_rate))
             .dbg_expect("Bond total price overflow");
 
-        info!(&format!(
+        trace!(&format!(
                 "{bond_id}: Transferring {amount} {issuer_money} from {issuer} to {buyer}"
             ));
 
@@ -100,10 +99,10 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
             .dbg_expect("Failed to pay bond interest");
 
         let coupon_payment_idx = find_coupon_payment_idx(&buyer);
-        info!(&format!("{bond_id}: index of coupon payment: {coupon_payment_idx}"));
+        trace!(&format!("{bond_id}: index of coupon payment: {coupon_payment_idx}"));
 
         let transfer_metadata_id: Name = format!(
-            "coupon_payment_{}_idx_{}", bond_id.name().to_string(), coupon_payment_idx.to_string())
+            "coupon_payment_{}_idx_{}", bond_id.name().to_owned(), coupon_payment_idx.to_owned())
             .parse()
             .dbg_expect("INTERNAL BUG: Unable to parse transfer metadata id");
 

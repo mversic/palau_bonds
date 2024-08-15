@@ -6,8 +6,8 @@ extern crate alloc;
 extern crate panic_halt;
 
 use alloc::{borrow::ToOwned as _, format};
-use alloc::string::ToString;
 use dlmalloc::GlobalDlmalloc;
+use iroha_trigger::log::trace;
 use iroha_trigger::{data_model::prelude::*, debug::dbg_panic, log::{error, info}};
 
 #[global_allocator]
@@ -79,7 +79,7 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
             ));
         } else {
             if buyer == issuer {
-                info!(&format!("{bond_id}: Buyer is the issuer, skipping maturity payment"));
+                trace!(&format!("{bond_id}: Buyer is the issuer, skipping maturity payment"));
 
                 continue;
             }
@@ -94,7 +94,8 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
                 .execute()
                 .dbg_expect("Sending money failed. Country might have gone bankrupt");
 
-            let transfer_metadata_id: Name = format!("maturity_payment_{}", bond_id.name().to_string())
+            let transfer_metadata_id: Name = format!(
+                "maturity_payment_{}_{}", bond_id.name(), bond_id.domain_id())
                 .parse()
                 .dbg_expect("INTERNAL BUG: Unable to parse transfer metadata id");
 

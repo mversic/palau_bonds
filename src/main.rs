@@ -195,11 +195,7 @@ fn main() -> Result<()> {
     register_bond(&iroha, new_bond)?;
 
     // Buy some bonds
-    // buy_bonds(&iroha)?;
-
-    // thread::sleep(Duration::from_secs(25));
-
-    // buy_bonds(&iroha)?;
+    buy_bonds(&iroha)?;
 
     Ok(())
 }
