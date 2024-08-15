@@ -98,6 +98,7 @@ fn create_new_bond() -> <AssetDefinition as Registered>::With {
     let curr_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let currency_id: AssetDefinitionId = "USD#palau".parse().unwrap();
     let limits = Limits::new(1024, 1024);
+    let fee_recipient_account_id: AccountId = "government@palau".parse().unwrap();
 
     let mut bond_metadata = Metadata::new();
     bond_metadata
@@ -117,11 +118,25 @@ fn create_new_bond() -> <AssetDefinition as Registered>::With {
             limits,
         )
         .unwrap();
+    bond_metadata
+        .insert_with_limits(
+            "fixed_fee".parse().unwrap(),
+            0.1_f64.try_into().unwrap(),
+            limits,
+        )
+        .unwrap();
+    bond_metadata
+        .insert_with_limits(
+            "fee_recipient_account_id".parse().unwrap(),
+            fee_recipient_account_id.into(),
+            limits,
+        )
+        .unwrap();
 
     bond_metadata
         .insert_with_limits(
             "maturation_date_ms".parse().unwrap(),
-            ((curr_time + Duration::from_secs(10)).as_millis() as u64).into(),
+            ((curr_time + Duration::from_secs(120)).as_millis() as u64).into(),
             limits,
         )
         .unwrap();
@@ -149,7 +164,7 @@ fn buy_bonds(iroha: &Client) -> Result<()> {
         .unwrap();
 
     buy_order
-        .insert_with_limits("quantity".parse().unwrap(), 13_u32.into(), limits)
+        .insert_with_limits("quantity".parse().unwrap(), 3_u32.into(), limits)
         .unwrap();
 
     println!("Buying bond...");

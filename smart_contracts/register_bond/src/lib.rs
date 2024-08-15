@@ -54,7 +54,7 @@ impl RegisterBond {
         ));
         // FIXME: Temporarily undefined. What values do we support here? Any period or
         // specified enum variants like `Yearly`/`Quarterly`/`Monthly`/`Weekly`?
-        let payment_period = Duration::from_millis(4000);
+        let payment_period = Duration::from_millis(10_000);
 
         let bond_id = self.new_bond.id();
         let interest_payments_trigger_id: TriggerId = format!(
@@ -101,6 +101,8 @@ impl RegisterBond {
             Duration::from_millis(maturation_date_ms.try_into().dbg_expect(
                 "INTERNAL BUG: `maturation_date_ms` not of the `NumericValue::U64` type",
             ));
+
+        info!(&format!("Bond maturation date: {maturation_date_ms}"));
 
         let bond_id = self.new_bond.id();
         let maturation_trigger_id: TriggerId = format!(
