@@ -102,7 +102,10 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
         trace!(&format!("{bond_id}: index of coupon payment: {coupon_payment_idx}"));
 
         let transfer_metadata_id: Name = format!(
-            "coupon_payment_{}_idx_{}", bond_id.name().to_owned(), coupon_payment_idx.to_owned())
+            "coupon_payment_{}%%{}%%idx%%{}",
+            bond_id.name().to_owned(),
+            bond_id.domain_id().to_owned(),
+            coupon_payment_idx.to_owned())
             .parse()
             .dbg_expect("INTERNAL BUG: Unable to parse transfer metadata id");
 

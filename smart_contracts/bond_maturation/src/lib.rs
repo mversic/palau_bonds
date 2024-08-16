@@ -95,7 +95,7 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
                 .dbg_expect("Sending money failed. Country might have gone bankrupt");
 
             let transfer_metadata_id: Name = format!(
-                "maturity_payment_{}_{}", bond_id.name(), bond_id.domain_id())
+                "maturity_payment_{}%%{}", bond_id.name(), bond_id.domain_id())
                 .parse()
                 .dbg_expect("INTERNAL BUG: Unable to parse transfer metadata id");
 
