@@ -77,7 +77,7 @@ impl BuyBondsOrder {
             error!("Asset owner doesn't have enough funds");
             false
         } else {
-            trace!("Asset owner doesn't have enough funds");
+            trace!("Asset owner has enough funds");
             true
         }
     }

@@ -45,7 +45,7 @@
       },
       {
         "Mint": {
-          "object": "13000_fx",
+          "object": "1300000_fx",
           "destination_id": {
             "AssetId": "USD##government@palau"
           }
@@ -53,7 +53,7 @@
       },
       {
         "Mint": {
-          "object": "13000_fx",
+          "object": "130000_fx",
           "destination_id": {
             "AssetId": "USD##citizen@palau"
           }
