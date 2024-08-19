@@ -106,6 +106,9 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
             transfer_metadata
                 .insert_with_limits("currency".parse().unwrap(), bond_issuer_money.into(), LIMITS)
                 .unwrap();
+            transfer_metadata
+                .insert_with_limits("bond_asset_id".parse().unwrap(), bond_id.clone().into(), LIMITS)
+                .unwrap();
 
             SetKeyValueExpr::new(buyer, transfer_metadata_id, transfer_metadata)
                 .execute()

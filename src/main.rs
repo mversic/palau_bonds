@@ -107,14 +107,14 @@ fn create_new_bond() -> <AssetDefinition as Registered>::With {
     bond_metadata
         .insert_with_limits(
             "nominal_value".parse().unwrap(),
-            100_f64.try_into().unwrap(),
+            100_000_f64.try_into().unwrap(), // 100_000$ to make the final value 0.19$
             limits,
         )
         .unwrap();
     bond_metadata
         .insert_with_limits(
             "coupon_rate".parse().unwrap(),
-            0.1.try_into().unwrap(),
+            0.1.try_into().unwrap(), //10%
             limits,
         )
         .unwrap();
@@ -148,6 +148,15 @@ fn create_new_bond() -> <AssetDefinition as Registered>::With {
         )
         .unwrap();
 
+    let payment_frequency_seconds = 60_u64;
+    bond_metadata
+        .insert_with_limits(
+            "payment_frequency_seconds".parse().unwrap(),
+            payment_frequency_seconds.try_into().unwrap(),
+            limits,
+        )
+        .unwrap();
+
     AssetDefinition::new("t-bond#palau".parse().unwrap(), AssetValueType::Quantity)
         .with_metadata(bond_metadata)
 }
@@ -164,12 +173,13 @@ fn buy_bonds(iroha: &Client) -> Result<()> {
         .unwrap();
 
     buy_order
-        .insert_with_limits("quantity".parse().unwrap(), 3_u32.into(), limits)
+        .insert_with_limits("quantity".parse().unwrap(), 1_u32.into(), limits)
         .unwrap();
 
     println!("Buying bond...");
-    let keypair = KeyPair::new("ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0".parse()?,
-        PrivateKey::from_hex(Algorithm::Ed25519, "9AC47ABF59B356E0BD7DCBBBB4DEC080E302156A48CA907E47CB6AEA1D32719E7233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0".as_ref())?
+    let keypair = KeyPair::new(
+        "ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0".parse()?,
+        PrivateKey::from_hex(Algorithm::Ed25519, "9AC47ABF59B356E0BD7DCBBBB4DEC080E302156A48CA907E47CB6AEA1D32719E7233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0".as_ref())?,
     )?;
 
     let tx = TransactionBuilder::new(buyer.clone())

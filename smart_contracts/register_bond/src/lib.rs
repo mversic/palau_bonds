@@ -52,9 +52,16 @@ impl RegisterBond {
         let registration_time = Duration::from_millis(registration_time_ms.try_into().dbg_expect(
             "INTERNAL BUG: `registration_time_ms` not of the `NumericValue::U64` type",
         ));
-        // FIXME: Temporarily undefined. What values do we support here? Any period or
-        // specified enum variants like `Yearly`/`Quarterly`/`Monthly`/`Weekly`?
-        let payment_period = Duration::from_millis(10_000);
+
+        let payment_frequency_seconds: u64 = self
+            .new_bond
+            .metadata()
+            .get(&"payment_frequency_seconds".parse::<Name>().unwrap())
+            .expect("INTERNAL BUG: bond missing `payment_frequency_seconds`")
+            .to_owned()
+            .try_into()
+            .expect("`payment_frequency_seconds` not of the `u64` type");
+        let payment_frequency = Duration::from_secs(payment_frequency_seconds);
 
         let bond_id = self.new_bond.id();
         let interest_payments_trigger_id: TriggerId = format!(
@@ -72,7 +79,7 @@ impl RegisterBond {
                 self.issuer.clone(),
                 // TODO: This is simplified in RC22
                 TriggeringFilterBox::from(TimeEventFilter::new(ExecutionTime::Schedule(
-                    TimeSchedule::starting_at(registration_time).with_period(payment_period),
+                    TimeSchedule::starting_at(registration_time).with_period(payment_frequency),
                 ))),
             ),
         );
@@ -110,8 +117,8 @@ impl RegisterBond {
             bond_id.name(),
             bond_id.domain_id()
         )
-        .parse()
-        .unwrap();
+            .parse()
+            .unwrap();
         let maturation_trigger = Trigger::new(
             maturation_trigger_id.clone(),
             Action::new(
