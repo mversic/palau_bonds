@@ -83,13 +83,8 @@ fn register_bond(iroha: &Client, new_bond: <AssetDefinition as Registered>::With
         new_bond.clone(),
     );
 
-    let issuer = "government@palau".parse()?;
-    let gov_bond = AssetId::new(new_bond.id().clone(), issuer);
-    let initial_amount = MintExpr::new(13_u32, gov_bond);
-
     println!("Registering new bond...");
     iroha.submit_blocking(set_key)?;
-    iroha.submit_blocking(initial_amount)?;
 
     Ok(())
 }
@@ -103,6 +98,13 @@ fn create_new_bond() -> <AssetDefinition as Registered>::With {
     let mut bond_metadata = Metadata::new();
     bond_metadata
         .insert_with_limits("currency".parse().unwrap(), currency_id.into(), limits)
+        .unwrap();
+    bond_metadata
+        .insert_with_limits(
+            "quantity".parse().unwrap(),
+            100_u32.into(),
+            limits,
+        )
         .unwrap();
     bond_metadata
         .insert_with_limits(

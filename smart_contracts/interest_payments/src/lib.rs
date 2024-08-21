@@ -153,13 +153,10 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
         let coupon_payment_idx_key: Name = "coupon_payment_idx"
             .parse()
             .dbg_expect("INTERNAL BUG: Unable to parse coupon payment index key");
-        let find_account_query = FindAccountById::new(buyer.clone());
 
-        let account = find_account_query
+        let current_idx = FindAccountById::new(buyer.clone())
             .execute()
-            .dbg_expect("INTERNAL BUG: Account not found");
-
-        let current_idx = account
+            .dbg_expect("INTERNAL BUG: Account not found")
             .metadata()
             .get(&coupon_payment_idx_key)
             .map(|idx| {

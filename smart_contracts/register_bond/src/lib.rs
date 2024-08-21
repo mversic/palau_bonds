@@ -142,7 +142,18 @@ impl RegisterBond {
         self.register_interest_payments_trigger();
         self.register_bond_maturation_trigger();
 
-        RegisterExpr::new(self.new_bond).execute().unwrap();
+        RegisterExpr::new(self.new_bond.clone()).execute().unwrap();
+
+        let bond_asset_id = AssetId::new(self.new_bond.id().clone(), self.issuer.clone());
+        let quantity: u32 = self.new_bond
+            .metadata()
+            .get(&"quantity".parse::<Name>().unwrap())
+            .dbg_expect("INTERNAL BUG: bond missing `quantity`")
+            .to_owned()
+            .try_into()
+            .dbg_expect("`quantity` not of the `u32` type");
+
+        MintExpr::new(quantity, bond_asset_id).execute().unwrap();
     }
 }
 
