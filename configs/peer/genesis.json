@@ -90,6 +90,21 @@
         }
       },
       {
+        "Grant": {
+          "object": {
+            "PermissionToken": {
+              "definition_id": "CanSetKeyValueInUserAccount",
+              "payload": {
+                "account_id": "citizen@palau"
+              }
+            }
+          },
+          "destination_id": {
+            "AccountId": "government@palau"
+          }
+        }
+      },
+      {
         "Sequence": [
           {
             "NewParameter": {

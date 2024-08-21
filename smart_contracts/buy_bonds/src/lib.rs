@@ -16,9 +16,12 @@ use iroha_trigger::{
     log::{error, trace},
     prelude::*,
 };
+use iroha_trigger::data_model::query::account::model::FindAccountById;
 
 #[global_allocator]
 static ALLOC: GlobalDlmalloc = GlobalDlmalloc;
+
+const LIMITS: MetadataLimits = MetadataLimits::new(256, 256);
 
 struct BuyBondsOrder {
     /// Who's selling the bonds
@@ -82,6 +85,32 @@ impl BuyBondsOrder {
         }
     }
 
+    fn find_buy_bond_payment_idx(buyer: &AccountId) -> u32 {
+        let buy_bond_payment_idx_key: Name = "buy_bond_payment_idx"
+            .parse()
+            .dbg_expect("INTERNAL BUG: Unable to parse buy bond payment index key");
+
+        let current_idx = FindAccountById::new(buyer.clone())
+            .execute()
+            .dbg_expect("INTERNAL BUG: Account not found")
+            .metadata()
+            .get(&buy_bond_payment_idx_key)
+            .map(|idx| {
+                idx.to_owned()
+                    .try_into()
+                    .dbg_expect("INTERNAL BUG: `buy_bond_payment_idx` not of the `u32` type")
+            })
+            .unwrap_or(0_u32);
+
+        let new_idx = current_idx + 1;
+
+        SetKeyValueExpr::new(buyer.clone(), buy_bond_payment_idx_key, Value::Numeric(new_idx.into()))
+            .execute()
+            .dbg_expect("Failed to set buy bond payment index to buyer's metadata");
+
+        new_idx
+    }
+
     fn execute(self) {
         let bond_currency: AssetDefinitionId = self
             .bond
@@ -124,7 +153,7 @@ impl BuyBondsOrder {
             .and_then(|qty| qty.checked_mul(bond_nominal_value))
             .dbg_expect("Bond total price overflow");
 
-        let bond_buyer_money = AssetId::new(bond_currency, self.buyer.clone());
+        let bond_buyer_money = AssetId::new(bond_currency.clone(), self.buyer.clone());
         let bond_issuer_bonds = AssetId::new(self.bond.id().clone(), self.issuer.clone());
 
         if !Self::check_account_asset_amount(&bond_buyer_money, bonds_total_price.into()) {
@@ -134,15 +163,38 @@ impl BuyBondsOrder {
             return;
         }
 
+        let buy_bond_payment_idx = Self::find_buy_bond_payment_idx(&self.buyer);
+        let transfer_metadata_id: Name = format!(
+            "buy_bond_payment_{}%%{}%%idx%%{}",
+            self.bond.id().name().to_owned(),
+            self.bond.id().domain_id().to_owned(),
+            buy_bond_payment_idx.to_owned())
+            .parse()
+            .dbg_expect("INTERNAL BUG: Unable to parse transfer metadata id");
+
+        let mut transfer_metadata = Metadata::new();
+        transfer_metadata
+            .insert_with_limits("amount".parse().unwrap(), bonds_total_price.into(), LIMITS)
+            .unwrap();
+        transfer_metadata
+            .insert_with_limits("currency".parse().unwrap(), bond_currency.into(), LIMITS)
+            .unwrap();
+        transfer_metadata
+            .insert_with_limits("bond_asset_id".parse().unwrap(), self.bond.id().clone().into(), LIMITS)
+            .unwrap();
+
         TransferExpr::new(bond_buyer_money.clone(), bonds_total_price, self.issuer)
             .execute()
             .dbg_expect("Sending money failed");
         TransferExpr::new(bond_buyer_money, bond_fee, bond_fee_recipient)
             .execute()
             .dbg_expect("Sending fee failed");
-        TransferExpr::new(bond_issuer_bonds, self.quantity.get(), self.buyer)
+        TransferExpr::new(bond_issuer_bonds, self.quantity.get(), self.buyer.clone())
             .execute()
             .dbg_expect("Sending bond failed");
+        SetKeyValueExpr::new(self.buyer, transfer_metadata_id, transfer_metadata)
+            .execute()
+            .dbg_expect("Failed to set buy bond info to buyer's metadata");
     }
 }
 
