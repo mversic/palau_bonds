@@ -296,6 +296,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "executor"
+version = "0.1.0"
+dependencies = [
+ "dlmalloc",
+ "iroha_executor",
+ "panic-halt",
+]
+
+[[package]]
 name = "eyre"
 version = "0.6.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -482,6 +491,33 @@ dependencies = [
  "manyhow",
  "proc-macro2",
  "quote",
+ "syn 2.0.72",
+]
+
+[[package]]
+name = "iroha_executor"
+version = "2.0.0-pre-rc.20"
+source = "git+https://github.com/hyperledger/iroha?branch=stable#5d44d595a65605b7999726e4a2a38dda949f2e63"
+dependencies = [
+ "iroha_executor_derive",
+ "iroha_schema",
+ "iroha_smart_contract",
+ "iroha_smart_contract_utils",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "iroha_executor_derive"
+version = "2.0.0-pre-rc.20"
+source = "git+https://github.com/hyperledger/iroha?branch=stable#5d44d595a65605b7999726e4a2a38dda949f2e63"
+dependencies = [
+ "darling",
+ "iroha_macro_utils",
+ "manyhow",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
  "syn 2.0.72",
 ]
 

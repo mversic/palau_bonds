@@ -1,0 +1,16 @@
+[package]
+name = "executor"
+
+edition.workspace = true
+version.workspace = true
+
+license.workspace = true
+
+[lib]
+crate-type = ['cdylib']
+
+[dependencies]
+iroha_executor = { git = "https://github.com/hyperledger/iroha", branch = "stable", features = ["debug"] }
+
+panic-halt.workspace = true
+dlmalloc.workspace = true

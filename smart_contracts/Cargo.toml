@@ -7,6 +7,7 @@ license = "Apache-2.0"
 [workspace]
 resolver = "2"
 members = [
+    "executor",
     "register_bond",
     "bond_maturation",
     "interest_payments",

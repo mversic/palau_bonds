@@ -2,6 +2,7 @@
 
 # Rust
 target/
+**/executor.wasm
 
 # Ignore .env file which might contain sensitive information
 .env
