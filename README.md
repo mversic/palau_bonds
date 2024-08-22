@@ -2,6 +2,8 @@
 
 ### Usage example
 
+- build `smart_contracts/executor`
+- put `executor.wasm` into `configs/peer`
 - docker-compose up -d
 - cargo run
 
