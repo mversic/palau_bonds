@@ -177,6 +177,9 @@ impl BuyBondsOrder {
             .insert_with_limits("amount".parse().unwrap(), bonds_total_price.into(), LIMITS)
             .unwrap();
         transfer_metadata
+            .insert_with_limits("quantity".parse().unwrap(), self.quantity.get().into(), LIMITS)
+            .unwrap();
+        transfer_metadata
             .insert_with_limits("currency".parse().unwrap(), bond_currency.into(), LIMITS)
             .unwrap();
         transfer_metadata
