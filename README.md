@@ -2,8 +2,8 @@
 
 ### Usage example
 
-- build `smart_contracts/executor`
-- put `executor.wasm` into `configs/peer`
+- build `smart_contracts/executor`: `cargo build --release`
+- put `./target/wasm32-unknown-unknown/release/executor.wasm` into `configs/peer`
 - docker-compose up -d
 - cargo run
 

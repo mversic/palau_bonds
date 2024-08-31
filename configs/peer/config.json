@@ -13,7 +13,24 @@
     "KEY_PAIR": null,
     "PEER_ID": null,
     "BLOCK_TIME_MS": 2000,
-    "TRUSTED_PEERS": null,
+    "TRUSTED_PEERS": [
+      {
+        "address": "iroha2-0:1337",
+        "public_key": "ed01201C61FAF8FE94E253B93114240394F79A607B7FA55F9E5A41EBEC74B88055768B"
+      },
+      {
+        "address": "iroha2-1:1337",
+        "public_key": "ed0120CC25624D62896D3A0BFD8940F928DC2ABF27CC57CEFEB442AA96D9081AAE58A1"
+      },
+      {
+        "address": "iroha2-2:1337",
+        "public_key": "ed0120FACA9E8AA83225CB4D16D67F27DD4F93FC30FFA11ADC1F5C88FD5495ECC91020"
+      },
+      {
+        "address": "iroha2-3:1337",
+        "public_key": "ed01208E351A70B6A603ED285D666B8D689B680865913BA03CE29FB7D13A166C4E7F1F"
+      }
+    ],
     "COMMIT_TIME_LIMIT_MS": 4000,
     "MAX_TRANSACTIONS_IN_BLOCK": 512,
     "ACTOR_CHANNEL_CAPACITY": 100,
@@ -21,8 +38,8 @@
     "GOSSIP_PERIOD_MS": 1000
   },
   "TORII": {
-    "P2P_ADDR": null,
-    "API_URL": null,
+    "P2P_ADDR": "0.0.0.0:1337",
+    "API_URL": "0.0.0.0:8080",
     "MAX_TRANSACTION_SIZE": 32768,
     "MAX_CONTENT_LEN": 16384000,
     "FETCH_SIZE": 10,
