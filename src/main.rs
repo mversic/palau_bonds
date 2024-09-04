@@ -35,6 +35,15 @@ fn register_triggers(iroha: &Client) -> Result<()> {
             .optimize()?
             .into_bytes()?,
     );
+    println!("Building redeem_bonds trigger...");
+    let redeem_bonds_wasm = WasmSmartContract::from_compiled(
+        iroha_wasm_builder::Builder::new("smart_contracts/redeem_bonds")
+            // TODO: Available in RC22
+            //.show_output()
+            .build()?
+            .optimize()?
+            .into_bytes()?,
+    );
 
     let register_bond_trigger_id: TriggerId = "register_bond".parse().unwrap();
     let register_bond_trigger = Trigger::new(
@@ -66,10 +75,28 @@ fn register_triggers(iroha: &Client) -> Result<()> {
         ),
     );
 
+    let redeem_bonds_trigger_id: TriggerId = "redeem_bonds_trigger".parse().unwrap();
+    let redeem_bonds_trigger = Trigger::new(
+        redeem_bonds_trigger_id.clone(),
+        Action::new(
+            redeem_bonds_wasm,
+            Repeats::Indefinitely,
+            account_id.clone(),
+            // TODO: Can be simplified in RC22
+            TriggeringFilterBox::from(BySome(DataEntityFilter::from(BySome(AccountFilter::new(
+                AcceptAll,
+                BySome(AccountEventFilter::ByMetadataInserted),
+            ))))),
+        ),
+    );
+
+
     println!("Registering register_bond trigger...");
     iroha.submit_blocking(RegisterExpr::new(register_bond_trigger))?;
     println!("Registering buy_bonds trigger...");
     iroha.submit_blocking(RegisterExpr::new(buy_bonds_trigger))?;
+    println!("Registering redeem_bonds trigger...");
+    iroha.submit_blocking(RegisterExpr::new(redeem_bonds_trigger))?;
 
     Ok(())
 }

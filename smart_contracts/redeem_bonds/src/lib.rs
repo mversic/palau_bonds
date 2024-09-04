@@ -1,4 +1,4 @@
-//! Smart contract for buying bonds
+//! Smart contract for redeeming bonds
 #![no_std]
 
 extern crate alloc;
@@ -17,25 +17,26 @@ use iroha_trigger::{
     prelude::*,
 };
 use iroha_trigger::data_model::query::account::model::FindAccountById;
+use iroha_trigger::log::info;
 
 #[global_allocator]
 static ALLOC: GlobalDlmalloc = GlobalDlmalloc;
 
 const LIMITS: MetadataLimits = MetadataLimits::new(256, 256);
 
-struct BuyBondsOrder {
-    /// Who's selling the bonds
+struct RedeemBondsOrder {
+    /// Who's buying back the bonds
     issuer: AccountId,
-    /// Who's buying the bond
-    buyer: AccountId,
-    /// Which bond to buy
+    /// Who's selling the bond
+    seller: AccountId,
+    /// Which bond to redeem
     bond: AssetDefinition,
-    /// How many bonds to buy
+    /// How many bonds to redeem
     quantity: NonZeroU32,
 }
 
-impl BuyBondsOrder {
-    fn from_metadata(metadata: &Metadata, issuer: AccountId, buyer: AccountId) -> Self {
+impl RedeemBondsOrder {
+    fn from_metadata(metadata: &Metadata, issuer: AccountId, seller: AccountId) -> Self {
         let bond_id: AssetDefinitionId = metadata
             .get("bond")
             .dbg_expect("Bond asset definition not found")
@@ -55,7 +56,7 @@ impl BuyBondsOrder {
 
         Self {
             issuer,
-            buyer,
+            seller,
             bond,
             quantity: NonZeroU32::new(quantity).dbg_expect("Bond quantity is zero"),
         }
@@ -85,10 +86,10 @@ impl BuyBondsOrder {
         }
     }
 
-    fn find_buy_bond_payment_idx(buyer: &AccountId) -> u32 {
-        let buy_bond_payment_idx_key: Name = "buy_bond_payment_idx"
+    fn find_redeem_bond_payment_idx(buyer: &AccountId) -> u32 {
+        let buy_bond_payment_idx_key: Name = "redeem_bond_payment_idx"
             .parse()
-            .dbg_expect("INTERNAL BUG: Unable to parse buy bond payment index key");
+            .dbg_expect("INTERNAL BUG: Unable to parse redeem bond payment index key");
 
         let current_idx = FindAccountById::new(buyer.clone())
             .execute()
@@ -98,7 +99,7 @@ impl BuyBondsOrder {
             .map(|idx| {
                 idx.to_owned()
                     .try_into()
-                    .dbg_expect("INTERNAL BUG: `buy_bond_payment_idx` not of the `u32` type")
+                    .dbg_expect("INTERNAL BUG: `redeem_bond_payment_idx` not of the `u32` type")
             })
             .unwrap_or(0_u32);
 
@@ -106,7 +107,7 @@ impl BuyBondsOrder {
 
         SetKeyValueExpr::new(buyer.clone(), buy_bond_payment_idx_key, Value::Numeric(new_idx.into()))
             .execute()
-            .dbg_expect("Failed to set buy bond payment index to buyer's metadata");
+            .dbg_expect("Failed to set redeem bond payment index to seller's metadata");
 
         new_idx
     }
@@ -130,45 +131,26 @@ impl BuyBondsOrder {
             .try_into()
             .dbg_expect("`nominal_value` not of the `NumericValue::Fixed` type");
 
-        // note: fixed fee is an absolute value, i.e 0.1$. Clarify if it should be a percentage of the bond nominal value
-        let bond_fee: Fixed = self
-            .bond
-            .metadata()
-            .get("fixed_fee")
-            .dbg_expect("Fixed fee not found")
-            .to_owned()
-            .try_into()
-            .dbg_expect("`fixed_fee` not of the `NumericValue::Fixed` type");
-
-        let bond_fee_recipient: AccountId = self
-            .bond
-            .metadata()
-            .get("fee_recipient_account_id")
-            .dbg_expect("Fee recipient account id not found")
-            .to_owned()
-            .try_into()
-            .dbg_expect("`fee_recipient_account_id` not of the `AccountId` type");
-
         let bonds_total_price = Fixed::try_from(self.quantity.get() as f64)
             .and_then(|qty| qty.checked_mul(bond_nominal_value))
             .dbg_expect("Bond total price overflow");
 
-        let bond_buyer_money = AssetId::new(bond_currency.clone(), self.buyer.clone());
-        let bond_issuer_bonds = AssetId::new(self.bond.id().clone(), self.issuer.clone());
+        let bond_seller_bonds = AssetId::new(self.bond.id().clone(), self.seller.clone());
+        let bond_issuer_money = AssetId::new(bond_currency.clone(), self.issuer.clone());
 
-        if !Self::check_account_asset_amount(&bond_buyer_money, bonds_total_price.into()) {
+        if !Self::check_account_asset_amount(&bond_issuer_money, bonds_total_price.into()) {
             return;
         }
-        if !Self::check_account_asset_amount(&bond_issuer_bonds, self.quantity.get().into()) {
+        if !Self::check_account_asset_amount(&bond_seller_bonds, self.quantity.get().into()) {
             return;
         }
 
-        let buy_bond_payment_idx = Self::find_buy_bond_payment_idx(&self.buyer);
+        let redeem_bond_payment_idx = Self::find_redeem_bond_payment_idx(&self.seller);
         let transfer_metadata_id: Name = format!(
-            "buy_bond_payment_{}%%{}%%idx%%{}",
+            "redeem_bond_payment_{}%%{}%%idx%%{}",
             self.bond.id().name().to_owned(),
             self.bond.id().domain_id().to_owned(),
-            buy_bond_payment_idx.to_owned())
+            redeem_bond_payment_idx.to_owned())
             .parse()
             .dbg_expect("INTERNAL BUG: Unable to parse transfer metadata id");
 
@@ -186,24 +168,27 @@ impl BuyBondsOrder {
             .insert_with_limits("bond_asset_id".parse().unwrap(), self.bond.id().clone().into(), LIMITS)
             .unwrap();
 
-        TransferExpr::new(bond_buyer_money.clone(), bonds_total_price, self.issuer)
+        let issuer = self.issuer.clone();
+        let seller = self.seller.clone();
+        info!(&format!(
+                "Transferring {bonds_total_price} {bond_issuer_money} from {issuer} to {seller}"
+            ));
+
+        TransferExpr::new(bond_issuer_money.clone(), bonds_total_price, self.seller.clone())
             .execute()
             .dbg_expect("Sending money failed");
-        TransferExpr::new(bond_buyer_money, bond_fee, bond_fee_recipient)
+        BurnExpr::new(self.quantity.get(), bond_seller_bonds)
             .execute()
-            .dbg_expect("Sending fee failed");
-        TransferExpr::new(bond_issuer_bonds, self.quantity.get(), self.buyer.clone())
+            .dbg_expect("Burning bonds failed");
+        SetKeyValueExpr::new(self.seller, transfer_metadata_id, transfer_metadata)
             .execute()
-            .dbg_expect("Sending bond failed");
-        SetKeyValueExpr::new(self.buyer, transfer_metadata_id, transfer_metadata)
-            .execute()
-            .dbg_expect("Failed to set buy bond info to buyer's metadata");
+            .dbg_expect("Failed to set redeem bond info to sellers's metadata");
     }
 }
 
 #[iroha_trigger::main]
 fn main(_id: TriggerId, issuer: AccountId, event: Event) {
-    let buy_bonds_key = "buy_bonds".parse().unwrap();
+    let redeem_bonds_key = "redeem_bonds".parse().unwrap();
 
     let Event::Data(DataEvent::Account(AccountEvent::MetadataInserted(event))) = event else {
         dbg_panic(
@@ -211,9 +196,9 @@ fn main(_id: TriggerId, issuer: AccountId, event: Event) {
             To avoid this error, register the trigger using a more strict filter",
         );
     };
-    if event.key() != &buy_bonds_key {
+    if event.key() != &redeem_bonds_key {
         // TODO: Can we filter more precisely to avoid invoking trigger?
-        trace!("It's not a buy bonds event");
+        trace!("It's not a redeem bonds event");
         return;
     }
 
@@ -221,9 +206,9 @@ fn main(_id: TriggerId, issuer: AccountId, event: Event) {
         dbg_panic("Metadata value not of the correct type, expected: LimitedMetadata");
     };
 
-    let buyer = event.target_id().clone();
-    BuyBondsOrder::from_metadata(metadata, issuer, buyer.clone()).execute();
-    RemoveKeyValueExpr::new(buyer, buy_bonds_key)
+    let seller = event.target_id().clone();
+    RedeemBondsOrder::from_metadata(metadata, issuer, seller.clone()).execute();
+    RemoveKeyValueExpr::new(seller, redeem_bonds_key)
         .execute()
         .dbg_unwrap();
 }

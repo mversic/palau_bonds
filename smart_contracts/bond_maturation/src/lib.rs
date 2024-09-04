@@ -104,6 +104,9 @@ fn main(id: TriggerId, issuer: AccountId, event: Event) {
                 .insert_with_limits("amount".parse().unwrap(), amount.into(), LIMITS)
                 .unwrap();
             transfer_metadata
+                .insert_with_limits("quantity".parse().unwrap(), quantity.into(), LIMITS)
+                .unwrap();
+            transfer_metadata
                 .insert_with_limits("currency".parse().unwrap(), bond_issuer_money.into(), LIMITS)
                 .unwrap();
             transfer_metadata

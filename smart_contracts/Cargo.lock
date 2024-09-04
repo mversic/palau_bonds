@@ -888,6 +888,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "redeem_bonds"
+version = "0.1.0"
+dependencies = [
+ "dlmalloc",
+ "iroha_trigger",
+ "panic-halt",
+]
+
+[[package]]
 name = "register_bond"
 version = "0.1.0"
 dependencies = [

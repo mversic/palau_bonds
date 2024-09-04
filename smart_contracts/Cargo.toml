@@ -12,6 +12,7 @@ members = [
     "bond_maturation",
     "interest_payments",
     "buy_bonds",
+    "redeem_bonds"
 ]
 
 [profile.dev]
