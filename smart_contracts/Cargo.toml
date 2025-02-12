@@ -12,6 +12,7 @@ members = [
     "bond_maturation",
     "interest_payments",
     "buy_bonds",
+    "redeem_bonds",
 ]
 
 [profile.dev]
@@ -25,7 +26,7 @@ opt-level = "z"     # Optimize for size vs speed with "s"/"z"(removes vectorizat
 codegen-units = 1   # Further reduces binary size but increases compilation time
 
 [workspace.dependencies]
-iroha_trigger = { git = "https://github.com/hyperledger/iroha", tag = "v2.0.0-pre-rc.22.0", features = ["debug"] }
+iroha_trigger = { git = "https://github.com/hyperledger/iroha", tag = "v2.0.0-pre-rc.22.2", features = ["debug"] }
 
 bonds_data_model = { path = "data_model" }
 

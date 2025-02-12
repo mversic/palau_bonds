@@ -1,8 +1,6 @@
 #![no_std]
 
-use core::time::Duration;
-
-use iroha_data_model::{
+use iroha_trigger::data_model::{
     account::AccountId,
     asset::{AssetDefinitionId, NewAssetDefinition},
     prelude::*,
@@ -20,11 +18,12 @@ pub struct RegisterBondArgs {
 pub struct LogEntry {
     pub bond: AssetDefinitionId,
     pub amount: Numeric,
+    pub quantity: Numeric,
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct BondDetails {
-    pub currency: AssetDefinitionId,
+    pub currency: JsonString,
     /// Value of the bond
     pub nominal_value: Numeric,
     // WARN: Coupon rate can be changed by the issuer
@@ -34,15 +33,37 @@ pub struct BondDetails {
     /// How many bonds to issue
     pub quantity: Numeric,
 
-    pub maturation_date: Duration,
-    pub registration_time: Duration,
-    pub payment_frequency: Duration,
+    pub maturation_date_sec: Numeric,
+    pub registration_time_sec: Numeric,
+    pub payment_frequency_sec: Numeric,
 
     // WARN: Can it be changed by the issuer like coupon_rate?
     // NOTE: fixed fee is an absolute value, i.e 0.1$.
     // Should it be a percentage of the nominal value?
     pub fee: Numeric,
-    pub fee_beneficiary: AccountId,
+    pub fee_beneficiary: JsonString,
+}
+
+pub trait FromJsonString: Sized {
+    fn from_json_string(json_string: &JsonString) -> Result<Self, serde_json::Error>;
+}
+
+impl FromJsonString for Metadata {
+    fn from_json_string(json_string: &JsonString) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json_string.as_ref())
+    }
+}
+
+impl FromJsonString for AssetDefinitionId {
+    fn from_json_string(json_string: &JsonString) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json_string.as_ref())
+    }
+}
+
+impl FromJsonString for AccountId {
+    fn from_json_string(json_string: &JsonString) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json_string.as_ref())
+    }
 }
 
 impl From<RegisterBondArgs> for JsonString {

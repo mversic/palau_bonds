@@ -1,5 +1,5 @@
 [package]
-name = "register_bond"
+name = "redeem_bonds"
 
 edition.workspace = true
 version.workspace = true
@@ -16,6 +16,3 @@ iroha_trigger.workspace = true
 panic-halt.workspace = true
 getrandom.workspace = true
 dlmalloc.workspace = true
-
-[build-dependencies]
-iroha_wasm_builder = { git = "https://github.com/hyperledger/iroha", tag = "v2.0.0-pre-rc.22.2" }

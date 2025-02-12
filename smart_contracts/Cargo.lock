@@ -275,7 +275,7 @@ dependencies = [
 name = "bonds_data_model"
 version = "0.1.0"
 dependencies = [
- "iroha_data_model",
+ "iroha_trigger",
  "serde",
  "serde_json",
 ]
@@ -877,13 +877,14 @@ dependencies = [
  "dlmalloc",
  "getrandom",
  "iroha_trigger",
+ "log",
  "panic-halt",
 ]
 
 [[package]]
 name = "iroha_crypto"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "aead",
  "arrayref",
@@ -917,8 +918,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_data_model"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "base64",
  "derive_more",
@@ -940,8 +941,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_data_model_derive"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "darling",
  "iroha_macro_utils",
@@ -953,8 +954,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_derive"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "darling",
  "manyhow",
@@ -965,16 +966,16 @@ dependencies = [
 
 [[package]]
 name = "iroha_macro"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "iroha_derive",
 ]
 
 [[package]]
 name = "iroha_macro_utils"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "darling",
  "drop_bomb",
@@ -986,8 +987,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_numeric"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "derive_more",
  "displaydoc",
@@ -1000,8 +1001,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_primitives"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "derive_more",
  "displaydoc",
@@ -1019,8 +1020,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_primitives_derive"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "iroha_numeric",
  "manyhow",
@@ -1031,8 +1032,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_schema"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "iroha_schema_derive",
  "serde",
@@ -1040,8 +1041,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_schema_derive"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "darling",
  "manyhow",
@@ -1052,8 +1053,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_smart_contract"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "derive_more",
  "getrandom",
@@ -1066,8 +1067,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_smart_contract_derive"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "iroha_macro_utils",
  "manyhow",
@@ -1078,8 +1079,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_smart_contract_utils"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "cfg-if",
  "iroha_data_model",
@@ -1088,8 +1089,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_trigger"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "iroha_smart_contract",
  "iroha_smart_contract_utils",
@@ -1098,8 +1099,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_trigger_derive"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "darling",
  "iroha_macro_utils",
@@ -1111,8 +1112,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_version"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "iroha_macro",
  "iroha_version_derive",
@@ -1123,8 +1124,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_version_derive"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "darling",
  "manyhow",
@@ -1135,8 +1136,8 @@ dependencies = [
 
 [[package]]
 name = "iroha_wasm_builder"
-version = "2.0.0-pre-rc.22.0"
-source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.0#29f1a48d60f2143b7424b79aa1f6ac3cba85aabd"
+version = "2.0.0-pre-rc.22.2"
+source = "git+https://github.com/hyperledger/iroha?tag=v2.0.0-pre-rc.22.2#3bfd0799fb10554c6feeb3eb638b89a9b8b166c7"
 dependencies = [
  "eyre",
  "path-absolutize",
@@ -1210,6 +1211,12 @@ name = "linux-raw-sys"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
+
+[[package]]
+name = "log"
+version = "0.4.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04cbf5b083de1c7e0222a7a51dbfdba1cbe1c6ab0b15e29fff3f6c077fd9cd9f"
 
 [[package]]
 name = "manyhow"
@@ -1496,6 +1503,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom",
+]
+
+[[package]]
+name = "redeem_bonds"
+version = "0.1.0"
+dependencies = [
+ "bonds_data_model",
+ "dlmalloc",
+ "getrandom",
+ "iroha_trigger",
+ "panic-halt",
 ]
 
 [[package]]

@@ -7,7 +7,7 @@ extern crate panic_halt;
 
 use alloc::format;
 
-use bonds_data_model::{BondDetails, LogEntry};
+use bonds_data_model::{BondDetails, FromJsonString, LogEntry};
 use dlmalloc::GlobalDlmalloc;
 use iroha_trigger::{
     data_model::{events::EventBox, prelude::*},
@@ -32,30 +32,36 @@ struct BuyBondsOrder {
 
 impl BuyBondsOrder {
     fn new(metadata: &JsonString, issuer: AccountId, buyer: AccountId) -> Self {
-        unimplemented!()
-        //let bond_id: AssetDefinitionId = metadata
-        //    .get("bond")
-        //    .dbg_expect("Bond asset definition not found")
-        //    .try_into_any()
-        //    .dbg_expect("`bond` not of the `AssetDefinitionId` type");
-        //let quantity: Numeric = metadata
-        //    .get("quantity")
-        //    .dbg_expect("Bond quantity not found")
-        //    .try_into_any()
-        //    .dbg_expect("`bond_quantity` is not of the `Numeric` type");
-        //assert_eq!(quantity.scale(), 0, "Bond quantity can't be a decimal");
+        let bond_key: Name = "bond".parse().unwrap();
+        let quantity_key: Name = "quantity".parse().unwrap();
 
-        //let bond = FindAssetDefinitionById::new(bond_id.clone())
-        //    .execute()
-        //    .dbg_expect(&format!("{bond_id}: asset definition not found"))
-        //    .into_inner();
+        let buy_bond_metadata = Metadata::from_json_string(metadata)
+            .dbg_expect("INTERNAL BUG: Unable to parse metadata");
 
-        //Self {
-        //    issuer,
-        //    buyer,
-        //    bond,
-        //    quantity,
-        //}
+        let bond_id: AssetDefinitionId = buy_bond_metadata
+            .get(&bond_key)
+            .dbg_expect("Bond asset definition not found")
+            .try_into_any()
+            .dbg_expect("`bond` not of the `AssetDefinitionId` type");
+        let quantity: Numeric = buy_bond_metadata
+            .get(&quantity_key)
+            .dbg_expect("Bond quantity not found")
+            .try_into_any::<u32>()
+            .dbg_expect("`bond_quantity` is not of the `Numeric` type")
+            .into();
+        assert_eq!(quantity.scale(), 0, "Bond quantity can't be a decimal");
+
+        let bond = FindAssetDefinitionById::new(bond_id.clone())
+            .execute()
+            .dbg_expect(&format!("{bond_id}: asset definition not found"))
+            .into_inner();
+
+        Self {
+            issuer,
+            buyer,
+            bond,
+            quantity,
+        }
     }
 
     fn check_account_asset_amount(asset_id: &AssetId, asset_amount: Numeric) -> bool {
@@ -90,11 +96,11 @@ impl BuyBondsOrder {
 
         let bonds_total_price = self
             .quantity
-            // FIXME: This must be checked_mul
-            .checked_add(bond_details.nominal_value)
+            .checked_mul(bond_details.nominal_value, NumericSpec::default())
             .dbg_expect("Bond total price overflow");
 
-        let bond_buyer_money = AssetId::new(bond_details.currency, self.buyer.clone());
+        let currency_id = AssetDefinitionId::from_json_string(&bond_details.currency).dbg_unwrap();
+        let bond_buyer_money = AssetId::new(currency_id, self.buyer.clone());
         let bond_issuer_bonds = AssetId::new(self.bond.id().clone(), self.issuer.clone());
 
         if !Self::check_account_asset_amount(&bond_buyer_money, bonds_total_price.into()) {
@@ -104,21 +110,25 @@ impl BuyBondsOrder {
             return;
         }
 
+        let fee_beneficiary =
+            AccountId::from_json_string(&bond_details.fee_beneficiary).dbg_unwrap();
+
         Transfer::asset_numeric(bond_buyer_money.clone(), bonds_total_price, self.issuer)
             .execute()
             .dbg_expect("Sending money failed");
-        Transfer::asset_numeric(
-            bond_buyer_money,
-            bond_details.fee,
-            bond_details.fee_beneficiary,
-        )
-        .execute()
-        .dbg_expect("Sending fee failed");
+        Transfer::asset_numeric(bond_buyer_money, bond_details.fee, fee_beneficiary)
+            .execute()
+            .dbg_expect("Sending fee failed");
         Transfer::asset_numeric(bond_issuer_bonds, self.quantity, self.buyer.clone())
             .execute()
             .dbg_expect("Sending bond failed");
 
-        write_log_entry(self.buyer, &self.bond.id(), self.quantity);
+        write_log_entry(
+            self.buyer,
+            &self.bond.id(),
+            bonds_total_price,
+            self.quantity,
+        );
     }
 }
 
@@ -151,13 +161,18 @@ fn find_buy_bond_payment_idx(buyer: &AccountId) -> u32 {
 }
 
 /// Write a log entry into the buyer's metadata
-fn write_log_entry(buyer: AccountId, bond_id: &AssetDefinitionId, amount: Numeric) {
+fn write_log_entry(
+    buyer: AccountId,
+    bond_id: &AssetDefinitionId,
+    amount: Numeric,
+    quantity: Numeric,
+) {
     let coupon_payment_idx = find_buy_bond_payment_idx(&buyer);
 
     let log_entry_id: Name = format!(
         "buy_bond_payment_{}%%{}%%idx%%{}",
-        bond_id.domain(),
         bond_id.name(),
+        bond_id.domain(),
         coupon_payment_idx,
     )
     .parse()
@@ -166,6 +181,7 @@ fn write_log_entry(buyer: AccountId, bond_id: &AssetDefinitionId, amount: Numeri
     let log_entry = LogEntry {
         bond: bond_id.clone(),
         amount,
+        quantity,
     };
 
     SetKeyValue::account(buyer, log_entry_id.clone(), log_entry)
@@ -190,9 +206,11 @@ fn main(_id: TriggerId, issuer: AccountId, event: EventBox) {
             To avoid this error, register the trigger using a more strict filter",
         );
     };
+    // TODO: Can we filter more precisely to avoid invoking trigger?
     if event.key() != &buy_bonds_key {
-        // TODO: Can we filter more precisely to avoid invoking trigger?
         trace!("Triggered by account metadata insert event with another key");
+
+        return;
     }
 
     let buyer = event.target().clone();

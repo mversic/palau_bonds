@@ -7,7 +7,7 @@ extern crate panic_halt;
 
 use alloc::format;
 
-use bonds_data_model::{BondDetails, LogEntry};
+use bonds_data_model::{BondDetails, FromJsonString, LogEntry};
 use dlmalloc::GlobalDlmalloc;
 use iroha_trigger::{
     data_model::{
@@ -42,14 +42,20 @@ fn parse_bond_id(id: TriggerId) -> AssetDefinitionId {
 }
 
 /// Write a log entry into the buyer's metadata
-fn write_log_entry(buyer: AccountId, bond_id: &AssetDefinitionId, amount: Numeric) {
-    let log_entry_id: Name = format!("bond_maturation_{}%%{}", bond_id.domain(), bond_id.name())
+fn write_log_entry(
+    buyer: AccountId,
+    bond_id: &AssetDefinitionId,
+    amount: Numeric,
+    quantity: Numeric,
+) {
+    let log_entry_id: Name = format!("bond_maturation_{}%%{}", bond_id.name(), bond_id.domain())
         .parse()
         .dbg_expect("INTERNAL BUG: Unable to parse transfer metadata id");
 
     let log_entry = LogEntry {
         bond: bond_id.clone(),
         amount,
+        quantity,
     };
     SetKeyValue::account(buyer, log_entry_id, log_entry)
         .execute()
@@ -80,6 +86,8 @@ fn main(id: TriggerId, issuer: AccountId, event: EventBox) {
         .dbg_expect("INTERNAL BUG: bond `details` not found")
         .try_into()
         .dbg_expect("INTERNAL BUG: bond `details` is not of the `BondDetails` type");
+    let currency_id = AssetDefinitionId::from_json_string(&bond_details.currency)
+        .dbg_expect("INTERNAL BUG: Unable to parse bond currency id");
 
     let issued_bonds = FindAssetsByAssetDefinitionId::new(bond_id.clone())
         .execute()
@@ -102,7 +110,7 @@ fn main(id: TriggerId, issuer: AccountId, event: EventBox) {
                 issued_bond.id()
             ));
         } else {
-            let bond_issuer_money = AssetId::new(bond_details.currency.clone(), issuer.clone());
+            let bond_issuer_money = AssetId::new(currency_id.clone(), issuer.clone());
 
             let AssetValue::Numeric(quantity) = issued_bond.value() else {
                 dbg_panic("INTERNAL BUG: bond quantity is not of the `Numeric` type")
@@ -110,8 +118,7 @@ fn main(id: TriggerId, issuer: AccountId, event: EventBox) {
             assert_eq!(quantity.scale(), 0, "Bond quantity can't be a decimal");
 
             let amount = quantity
-                // FIXME: This must be checked_mul
-                .checked_add(bond_details.nominal_value)
+                .checked_mul(bond_details.nominal_value, NumericSpec::default())
                 .dbg_expect("Bond total price overflow");
 
             trace!(&format!(
@@ -123,7 +130,7 @@ fn main(id: TriggerId, issuer: AccountId, event: EventBox) {
                 .execute()
                 .dbg_expect("Sending money failed. Country might have went bankrupt");
 
-            write_log_entry(buyer, &bond_id, quantity.clone());
+            write_log_entry(buyer, &bond_id, amount, quantity.clone());
         }
     }
 

@@ -29,22 +29,22 @@
     },
     {
       "Executor": {
-        "Fuel": 55000000
+        "Fuel": 1844674407370955161
       }
     },
     {
       "Executor": {
-        "Memory": 55000000
+        "Memory": 550000000
       }
     },
     {
       "SmartContract": {
-        "Fuel": 55000000
+        "Fuel": 1844674407370955161
       }
     },
     {
       "SmartContract": {
-        "Memory": 55000000
+        "Memory": 550000000
       }
     }
   ],
@@ -68,7 +68,7 @@
     {
       "Register": {
         "Account": {
-          "id": "ed0120CE7FA46C9DCE7EA4B125E2E36BDB63EA33073E7590AC92816AE1E861B7048B03@palau",
+          "id": "ed0120c65bfe5bc9ab3c6bb04d6677314a95cfca46c55f371a20df577e5857f3eef518@palau",
           "metadata": {}
         }
       }
@@ -95,7 +95,7 @@
       "Mint": {
         "Asset": {
           "object":  "1_300_000",
-          "destination": "USD##ed0120CE7FA46C9DCE7EA4B125E2E36BDB63EA33073E7590AC92816AE1E861B7048B03@palau"
+          "destination": "USD##ed0120c65bfe5bc9ab3c6bb04d6677314a95cfca46c55f371a20df577e5857f3eef518@palau"
         }
       }
     },
@@ -105,7 +105,7 @@
           "object": {
             "name": "CanTransferUserAsset",
             "payload": {
-              "asset": "USD##ed0120CE7FA46C9DCE7EA4B125E2E36BDB63EA33073E7590AC92816AE1E861B7048B03@palau"
+              "asset": "USD##ed0120c65bfe5bc9ab3c6bb04d6677314a95cfca46c55f371a20df577e5857f3eef518@palau"
             }
           },
           "destination": "ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0@palau"
@@ -118,7 +118,7 @@
           "object": {
             "name": "CanSetKeyValueInAccount",
             "payload": {
-              "account": "ed0120CE7FA46C9DCE7EA4B125E2E36BDB63EA33073E7590AC92816AE1E861B7048B03@palau"
+              "account": "ed0120c65bfe5bc9ab3c6bb04d6677314a95cfca46c55f371a20df577e5857f3eef518@palau"
             }
           },
           "destination": "ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0@palau"
@@ -131,13 +131,24 @@
           "object": {
             "name": "CanRemoveKeyValueInAccount",
             "payload": {
-              "account": "ed0120CE7FA46C9DCE7EA4B125E2E36BDB63EA33073E7590AC92816AE1E861B7048B03@palau"
+              "account": "ed0120c65bfe5bc9ab3c6bb04d6677314a95cfca46c55f371a20df577e5857f3eef518@palau"
             }
           },
           "destination": "ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0@palau"
         }
       }
+    },
+    {
+      "Transfer": {
+        "Domain": {
+          "source": "ed01204164BF554923ECE1FD412D241036D863A6AE430476C898248B8237D77534CFC4@genesis",
+          "object": "palau",
+          "destination": "ed01207233BFC89DCBD68C19FDE6CE6158225298EC1131B6A130D1AEB454C1AB5183C0@palau"
+        }
+      }
     }
   ],
+  "wasm_dir": "libs",
+  "wasm_triggers": [],
   "topology": []
 }

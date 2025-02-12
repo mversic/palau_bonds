@@ -7,14 +7,16 @@ extern crate panic_halt;
 
 use alloc::format;
 
-use bonds_data_model::{BondDetails, LogEntry};
+use bonds_data_model::{BondDetails, FromJsonString, LogEntry};
 use dlmalloc::GlobalDlmalloc;
+use iroha_trigger::data_model::query::account::FindAccountById;
+use iroha_trigger::log::trace;
+use iroha_trigger::{data_model::prelude::*, debug::dbg_panic, log};
 use iroha_trigger::{
-    data_model::{events::EventBox, prelude::*},
-    debug::dbg_panic,
-    log::trace,
+    data_model::{asset::AssetDefinitionId, events::EventBox, prelude::*},
     smart_contract::{debug::DebugExpectExt as _, ExecuteOnHost as _, ExecuteQueryOnHost as _},
 };
+use log::info;
 
 #[global_allocator]
 static ALLOC: GlobalDlmalloc = GlobalDlmalloc;
@@ -23,7 +25,7 @@ const ONE_YEAR_IN_SECONDS: u64 = 31_536_000;
 
 /// Parse bond id from trigger name
 fn parse_bond_id(id: TriggerId) -> AssetDefinitionId {
-    const PREFIX: &str = "interest_payments_";
+    const PREFIX: &str = "coupon_payment_";
 
     id.name()
         .as_ref()
@@ -74,8 +76,8 @@ fn write_log_entry(buyer: AccountId, bond_id: &AssetDefinitionId, amount: Numeri
 
     let log_entry_id: Name = format!(
         "coupon_payment_{}%%{}%%idx%%{}",
-        bond_id.domain(),
         bond_id.name(),
+        bond_id.domain(),
         coupon_payment_idx,
     )
     .parse()
@@ -84,6 +86,7 @@ fn write_log_entry(buyer: AccountId, bond_id: &AssetDefinitionId, amount: Numeri
     let log_entry = LogEntry {
         bond: bond_id.clone(),
         amount,
+        quantity: Numeric::from(0_u32), //note: coupon payment doesn't have quantity
     };
 
     SetKeyValue::account(buyer, log_entry_id.clone(), log_entry)
@@ -104,6 +107,8 @@ fn main(id: TriggerId, issuer: AccountId, event: EventBox) {
         );
     }
 
+    log::info!("Executing interest payments trigger");
+
     let bond_id: AssetDefinitionId = parse_bond_id(id);
     let bond = FindAssetDefinitionById::new(bond_id.clone())
         .execute()
@@ -122,16 +127,24 @@ fn main(id: TriggerId, issuer: AccountId, event: EventBox) {
 
     let current_coupon_payment_fraction = bond_details
         .coupon_rate
-        // FIXME: This must be checked_mul
-        .checked_add(bond_details.payment_frequency.as_secs().into())
+        .checked_mul(
+            bond_details.payment_frequency_sec.into(),
+            NumericSpec::default(),
+        )
         .unwrap()
-        // FIXME: This must be checked_div
-        .checked_sub(ONE_YEAR_IN_SECONDS.into())
+        .checked_div(ONE_YEAR_IN_SECONDS.into(), NumericSpec::default())
         .expect("Coupon payment overflow");
+
+    let currency_id = AssetDefinitionId::from_json_string(&bond_details.currency)
+        .dbg_expect("INTERNAL BUG: Unable to parse currency id from bond details");
 
     for (buyer, issued_bond) in issued_bonds.into_iter().filter_map(|issued_bond| {
         let issued_bond = issued_bond.dbg_expect("Query expired");
         let buyer = issued_bond.id().account().clone();
+
+        info!(&format!(
+            "{bond_id}: Processing interest payment for {buyer} with {current_coupon_payment_fraction} coupon rate"
+        ));
 
         if buyer == issuer {
             return None;
@@ -139,7 +152,7 @@ fn main(id: TriggerId, issuer: AccountId, event: EventBox) {
 
         Some((buyer, issued_bond))
     }) {
-        let issuer_money = AssetId::new(bond_details.currency.clone(), issuer.clone());
+        let issuer_money = AssetId::new(currency_id.clone(), issuer.clone());
 
         let AssetValue::Numeric(quantity) = issued_bond.value() else {
             dbg_panic("INTERNAL BUG: bond quantity is not of the `Numeric` type")
@@ -147,11 +160,9 @@ fn main(id: TriggerId, issuer: AccountId, event: EventBox) {
         assert_eq!(quantity.scale(), 0, "Bond quantity can't be a decimal");
 
         let amount = quantity
-            // FIXME: This must be checked_mul
-            .checked_add(bond_details.nominal_value)
+            .checked_mul(bond_details.nominal_value, NumericSpec::default())
             .and_then(|qty| {
-                // FIXME: This must be checked_mul
-                qty.checked_add(current_coupon_payment_fraction)
+                qty.checked_mul(current_coupon_payment_fraction, NumericSpec::default())
             })
             .dbg_expect("Bond total price overflow");
 

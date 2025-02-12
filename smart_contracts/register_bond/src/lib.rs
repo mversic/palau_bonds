@@ -6,11 +6,11 @@ extern crate alloc;
 extern crate panic_halt;
 
 use alloc::format;
-
 use bonds_data_model::{BondDetails, RegisterBondArgs};
+use core::time::Duration;
 use dlmalloc::GlobalDlmalloc;
 use iroha_trigger::{
-    data_model::{events::EventBox, prelude::*},
+    data_model::Identifiable,
     debug::{dbg_panic, DebugExpectExt as _},
     log::info,
     prelude::*,
@@ -35,12 +35,11 @@ impl RegisterBond {
     }
 
     fn register_interest_payments_trigger(&self) {
-        const WASM: &[u8] =
-            core::include_bytes!(concat!(core::env!("OUT_DIR"), "/interest_payments.wasm"));
+        const WASM: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/interest_payments.wasm"));
 
         let bond_id = self.bond.id();
         let trigger_id: TriggerId =
-            format!("interest_payments_{}%%{}", bond_id.domain(), bond_id.name(),)
+            format!("coupon_payment_{}%%{}", bond_id.name(), bond_id.domain())
                 .parse()
                 .dbg_unwrap();
 
@@ -51,6 +50,17 @@ impl RegisterBond {
             .dbg_expect("INTERNAL BUG: bond `details` not found")
             .try_into()
             .dbg_expect("INTERNAL BUG: bond `details` is not of the `BondDetails` type");
+
+        let registration_time: u64 = bond_details
+            .registration_time_sec
+            .mantissa()
+            .try_into()
+            .unwrap();
+        let payment_frequency: u64 = bond_details
+            .payment_frequency_sec
+            .mantissa()
+            .try_into()
+            .unwrap();
 
         let interest_payments_trigger = Trigger::new(
             trigger_id.clone(),
@@ -58,27 +68,27 @@ impl RegisterBond {
                 WasmSmartContract::from_compiled(WASM.to_vec()),
                 Repeats::Indefinitely,
                 self.issuer.clone(),
-                // TODO: This is simplified in RC22
                 TimeEventFilter::new(ExecutionTime::Schedule(
-                    TimeSchedule::starting_at(bond_details.registration_time)
-                        .with_period(bond_details.payment_frequency),
+                    TimeSchedule::starting_at(
+                        //note: add 5secs to the registration time to avoid `start_time < current_time` error
+                        Duration::from_secs(registration_time + 5),
+                    )
+                    .with_period(Duration::from_secs(payment_frequency)),
                 )),
             ),
         );
 
-        info!(&format!("{trigger_id}: Registering ..."));
         Register::trigger(interest_payments_trigger)
             .execute()
-            .unwrap();
+            .dbg_unwrap();
     }
 
     fn register_bond_maturation_trigger(&self) {
-        const WASM: &[u8] =
-            core::include_bytes!(concat!(core::env!("OUT_DIR"), "/bond_maturation.wasm"));
+        const WASM: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/bond_maturation.wasm"));
 
         let bond_id = self.bond.id();
         let trigger_id: TriggerId =
-            format!("bond_maturation_{}%%{}", bond_id.domain(), bond_id.name())
+            format!("bond_maturation_{}%%{}", bond_id.name(), bond_id.domain())
                 .parse()
                 .dbg_unwrap();
 
@@ -89,6 +99,12 @@ impl RegisterBond {
             .dbg_expect("INTERNAL BUG: bond `details` not found")
             .try_into()
             .dbg_expect("INTERNAL BUG: bond `details` is not of the `BondDetails` type");
+
+        let maturation_date: u64 = bond_details
+            .maturation_date_sec
+            .mantissa()
+            .try_into()
+            .unwrap();
 
         let maturation_trigger = Trigger::new(
             trigger_id.clone(),
@@ -97,13 +113,13 @@ impl RegisterBond {
                 Repeats::Exactly(1),
                 self.issuer.clone(),
                 TimeEventFilter::new(ExecutionTime::Schedule(TimeSchedule::starting_at(
-                    bond_details.maturation_date,
+                    Duration::from_secs(maturation_date),
                 ))),
             ),
         );
 
         info!(&format!("{trigger_id}: Registering ..."));
-        Register::trigger(maturation_trigger).execute().unwrap();
+        Register::trigger(maturation_trigger).execute().dbg_unwrap();
     }
 
     fn execute(self) {
